@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Warehouse | Simulación Didáctica</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <header class="hero">
+        <div class="hero-bg"></div>
+        <nav class="nav">
+            <div class="logo">📊 DataWH Sim</div>
+            <div class="nav-links">
+                <a href="#problema">El Problema</a>
+                <a href="#arquitectura">Arquitectura</a>
+                <a href="#etl">ETL en Vivo</a>
+                <a href="#visualizaciones">Dashboards</a>
+                <a href="#predictiva">IA Predictiva</a>
+            </div>
+        </nav>
+        <div class="hero-content">
+            <div class="badge">SIMULACIÓN INTERACTIVA</div>
+            <h1>¿Por qué necesitas un<br><span class="grad">Data Warehouse?</span></h1>
+            <p class="hero-sub">Una guía visual paso a paso: desde el caos de datos operacionales hasta tableros
+                dinámicos y analítica predictiva.</p>
+            <button class="btn-main"
+                onclick="scrollTo({top: document.getElementById('problema').offsetTop - 60, behavior:'smooth'})">Comenzar
+                Simulación →</button>
+        </div>
+        <div class="hero-orbs">
+            <div class="orb o1"></div>
+            <div class="orb o2"></div>
+            <div class="orb o3"></div>
+        </div>
+    </header>
+
+    <main>
+
+        <!-- SECCIÓN 1: EL PROBLEMA -->
+        <section id="problema" class="section dark">
+            <div class="container">
+                <span class="label">FASE 1 · EL PROBLEMA</span>
+                <h2>El Caos de los Datos Operacionales</h2>
+                <p class="section-desc">Las empresas tienen múltiples sistemas que generan datos en formatos distintos,
+                    a velocidades distintas, sin comunicarse entre sí. ¿Qué pasa cuando intentas hacer un reporte?</p>
+                <div class="chaos-grid" id="chaosGrid">
+                    <div class="sys-card" data-sys="crm">
+                        <div class="sys-icon">👥</div>
+                        <div class="sys-title">CRM</div>
+                        <div class="sys-sub">Salesforce / HubSpot</div>
+                        <div class="sys-data" id="crmData">Cargando...</div>
+                        <div class="sys-tag">SQL · 10K reg/día</div>
+                    </div>
+                    <div class="sys-card" data-sys="erp">
+                        <div class="sys-icon">🏭</div>
+                        <div class="sys-title">ERP</div>
+                        <div class="sys-sub">SAP / Oracle</div>
+                        <div class="sys-data" id="erpData">Cargando...</div>
+                        <div class="sys-tag">XML · 50K reg/día</div>
+                    </div>
+                    <div class="sys-card" data-sys="ecom">
+                        <div class="sys-icon">🛒</div>
+                        <div class="sys-title">E-Commerce</div>
+                        <div class="sys-sub">Magento / Shopify</div>
+                        <div class="sys-data" id="ecomData">Cargando...</div>
+                        <div class="sys-tag">JSON · 200K reg/día</div>
+                    </div>
+                    <div class="sys-card" data-sys="mktg">
+                        <div class="sys-icon">📣</div>
+                        <div class="sys-title">Marketing</div>
+                        <div class="sys-sub">Meta Ads / Google</div>
+                        <div class="sys-data" id="mktgData">Cargando...</div>
+                        <div class="sys-tag">API · Tiempo real</div>
+                    </div>
+                    <div class="sys-card" data-sys="fin">
+                        <div class="sys-icon">💳</div>
+                        <div class="sys-title">Finanzas</div>
+                        <div class="sys-sub">Contaplus / SAP FI</div>
+                        <div class="sys-data" id="finData">Cargando...</div>
+                        <div class="sys-tag">CSV · 5K reg/día</div>
+                    </div>
+                    <div class="sys-card" data-sys="sc">
+                        <div class="sys-icon">🚚</div>
+                        <div class="sys-title">Supply Chain</div>
+                        <div class="sys-sub">WMS / TMS</div>
+                        <div class="sys-data" id="scData">Cargando...</div>
+                        <div class="sys-tag">EDI · 30K reg/día</div>
+                    </div>
+                </div>
+                <div class="chaos-warning">
+                    <span class="warn-icon">⚠️</span>
+                    <div>
+                        <strong>Sin un Data Warehouse</strong>, cada reporte requiere conectar manualmente estos
+                        sistemas. Los datos son inconsistentes, duplicados y se contradicen entre sí. Un analista tarda
+                        <em>días</em> en producir un solo informe.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 2: ARQUITECTURA -->
+        <section id="arquitectura" class="section light">
+            <div class="container">
+                <span class="label">FASE 2 · LA SOLUCIÓN</span>
+                <h2>Arquitectura del Data Warehouse</h2>
+                <p class="section-desc">El DW actúa como una fuente única de verdad (Single Source of Truth), integrando
+                    todos los datos en un modelo optimizado para análisis.</p>
+                <div class="arch-diagram">
+                    <!-- Capa 1 -->
+                    <div class="arch-layer" id="archLayer1">
+                        <div class="arch-layer-title">Sistemas Operacionales</div>
+                        <div class="arch-icons-row">
+                            <div class="arch-icon-pill">CRM</div>
+                            <div class="arch-icon-pill">ERP</div>
+                            <div class="arch-icon-pill">E-COM</div>
+                            <div class="arch-icon-pill">MKT</div>
+                            <div class="arch-icon-pill">FIN</div>
+                        </div>
+                    </div>
+                    <div class="arch-arrow" id="arrow1">
+                        <div class="arrow-label">ETL / ELT</div>
+                        <div class="arrow-pulse"></div>
+                    </div>
+                    <!-- Capa 2 -->
+                    <div class="arch-layer accent-layer" id="archLayer2">
+                        <div class="arch-layer-title">🏛️ Data Warehouse (DW)</div>
+                        <div class="arch-layer-sub">Staging → ODS → Data Marts</div>
+                        <div class="arch-icons-row mt-small">
+                            <div class="arch-icon-pill dm">Ventas DM</div>
+                            <div class="arch-icon-pill dm">Finanzas DM</div>
+                            <div class="arch-icon-pill dm">Clientes DM</div>
+                        </div>
+                    </div>
+                    <div class="arch-arrow" id="arrow2">
+                        <div class="arrow-label">Consultas optimizadas</div>
+                        <div class="arrow-pulse"></div>
+                    </div>
+                    <!-- Capa 3 -->
+                    <div class="arch-layer-bottom">
+                        <div class="arch-layer viz-layer">
+                            <div class="arch-layer-title">📊 BI &amp; Visualizaciones</div>
+                            <div class="arch-icons-row">
+                                <div class="arch-icon-pill viz">Power BI</div>
+                                <div class="arch-icon-pill viz">Tableau</div>
+                                <div class="arch-icon-pill viz">Metabase</div>
+                            </div>
+                        </div>
+                        <div class="arch-layer ai-layer">
+                            <div class="arch-layer-title">🤖 Analítica Predictiva</div>
+                            <div class="arch-icons-row">
+                                <div class="arch-icon-pill ai">Python/R</div>
+                                <div class="arch-icon-pill ai">ML Models</div>
+                                <div class="arch-icon-pill ai">AutoML</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 3: ETL EN VIVO -->
+        <section id="etl" class="section dark">
+            <div class="container">
+                <span class="label">FASE 3 · ETL EN ACCIÓN</span>
+                <h2>Proceso ETL Animado</h2>
+                <p class="section-desc">Observa en tiempo real cómo los datos son <strong>Extraídos</strong>,
+                    <strong>Transformados</strong> y <strong>Cargados</strong> en el Data Warehouse.
+                </p>
+
+                <div class="etl-controls">
+                    <button class="etl-btn" id="btnRunETL" onclick="runETL()">▶ Ejecutar ETL</button>
+                    <button class="etl-btn secondary" onclick="resetETL()">↺ Reiniciar</button>
+                    <div class="etl-status" id="etlStatus">Listo para ejecutar</div>
+                </div>
+
+                <div class="etl-pipeline">
+                    <!-- EXTRACT -->
+                    <div class="etl-stage" id="stageExtract">
+                        <div class="etl-stage-header">
+                            <span class="etl-num">1</span>
+                            <span class="etl-stage-name">EXTRACT</span>
+                        </div>
+                        <div class="etl-stage-body">
+                            <div class="etl-log" id="extractLog"></div>
+                        </div>
+                        <div class="etl-stage-footer">
+                            <span class="etl-metric" id="extractRows">0 registros</span>
+                        </div>
+                    </div>
+
+                    <div class="etl-connector" id="conn1">
+                        <div class="etl-particles" id="particles1"></div>
+                    </div>
+
+                    <!-- TRANSFORM -->
+                    <div class="etl-stage" id="stageTransform">
+                        <div class="etl-stage-header">
+                            <span class="etl-num">2</span>
+                            <span class="etl-stage-name">TRANSFORM</span>
+                        </div>
+                        <div class="etl-stage-body">
+                            <div class="etl-log" id="transformLog"></div>
+                        </div>
+                        <div class="etl-stage-footer">
+                            <span class="etl-metric" id="transformRows">0 registros limpios</span>
+                        </div>
+                    </div>
+
+                    <div class="etl-connector" id="conn2">
+                        <div class="etl-particles" id="particles2"></div>
+                    </div>
+
+                    <!-- LOAD -->
+                    <div class="etl-stage" id="stageLoad">
+                        <div class="etl-stage-header">
+                            <span class="etl-num">3</span>
+                            <span class="etl-stage-name">LOAD</span>
+                        </div>
+                        <div class="etl-stage-body">
+                            <div class="etl-log" id="loadLog"></div>
+                        </div>
+                        <div class="etl-stage-footer">
+                            <span class="etl-metric" id="loadRows">0 cargados al DW</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DW Table preview -->
+                <div class="dw-preview" id="dwPreview" style="display:none">
+                    <h3>🏛️ Data Warehouse — Tabla de Hechos: <code>fact_ventas</code></h3>
+                    <div class="table-wrap">
+                        <table id="dwTable">
+                            <thead>
+                                <tr>
+                                    <th>fecha_id</th>
+                                    <th>cliente_id</th>
+                                    <th>producto_id</th>
+                                    <th>canal</th>
+                                    <th>monto_usd</th>
+                                    <th>unidades</th>
+                                    <th>margen_%</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dwTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 4: VISUALIZACIONES -->
+        <section id="visualizaciones" class="section light">
+            <div class="container">
+                <span class="label">FASE 4 · POWER BI / VISUALIZACIONES</span>
+                <h2>Dashboards Dinámicos</h2>
+                <p class="section-desc">Con el DW como fuente, Power BI conecta una sola vez y los reportes se
+                    actualizan automáticamente. Sin consultas manuales, sin inconsistencias.</p>
+
+                <div class="dash-tabs">
+                    <button class="dash-tab active" onclick="showDash('ventas')">📈 Ventas</button>
+                    <button class="dash-tab" onclick="showDash('clientes')">👥 Clientes</button>
+                    <button class="dash-tab" onclick="showDash('ops')">⚙️ Operaciones</button>
+                </div>
+
+                <div class="dash-container">
+                    <!-- VENTAS -->
+                    <div class="dash-panel active" id="dash-ventas">
+                        <div class="kpi-row">
+                            <div class="kpi-card">
+                                <div class="kpi-val" data-count="2847392">0</div>
+                                <div class="kpi-label">Ventas Totales USD</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-val" data-count="18432">0</div>
+                                <div class="kpi-label">Órdenes del Mes</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-val pct" data-count="34">0</div>
+                                <div class="kpi-label">Crecimiento YoY %</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-val" data-count="154">0</div>
+                                <div class="kpi-label">Ticket Promedio USD</div>
+                            </div>
+                        </div>
+                        <div class="chart-row">
+                            <div class="chart-box">
+                                <div class="chart-title">Ventas por Mes (USD)</div>
+                                <canvas id="chartVentas" width="380" height="200"></canvas>
+                            </div>
+                            <div class="chart-box">
+                                <div class="chart-title">Ventas por Canal</div>
+                                <canvas id="chartCanal" width="250" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CLIENTES -->
+                    <div class="dash-panel" id="dash-clientes">
+                        <div class="kpi-row">
+                            <div class="kpi-card">
+                                <div class="kpi-val" data-count="42310">0</div>
+                                <div class="kpi-label">Clientes Activos</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-val pct" data-count="78">0</div>
+                                <div class="kpi-label">Retención %</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-val" data-count="892">0</div>
+                                <div class="kpi-label">NPS Score</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-val" data-count="12">0</div>
+                                <div class="kpi-label">CLV Meses Promedio</div>
+                            </div>
+                        </div>
+                        <div class="chart-row">
+                            <div class="chart-box">
+                                <div class="chart-title">Segmentos de Clientes</div>
+                                <canvas id="chartSegmentos" width="300" height="200"></canvas>
+                            </div>
+                            <div class="chart-box">
+                                <div class="chart-title">Nuevos Clientes por Mes</div>
+                                <canvas id="chartNuevos" width="340" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- OPERACIONES -->
+                    <div class="dash-panel" id="dash-ops">
+                        <div class="kpi-row">
+                            <div class="kpi-card">
+                                <div class="kpi-val pct" data-count="97">0</div>
+                                <div class="kpi-label">Fill Rate Inventario %</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-val" data-count="2">0</div>
+                                <div class="kpi-label">Lead Time Días</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-val" data-count="340">0</div>
+                                <div class="kpi-label">SKUs Activos</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-val pct" data-count="12">0</div>
+                                <div class="kpi-label">Devoluciones %</div>
+                            </div>
+                        </div>
+                        <div class="chart-row">
+                            <div class="chart-box full">
+                                <div class="chart-title">Inventario vs. Demanda por Producto</div>
+                                <canvas id="chartOps" width="680" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="pbi-badge">
+                    <span>Conectado a:</span>
+                    <span class="pbi-tag">📊 Power BI</span>
+                    <span class="pbi-tag">📉 Tableau</span>
+                    <span class="pbi-tag">🔍 Metabase</span>
+                    <span class="pbi-tag">📋 Excel</span>
+                    <span class="refresh-badge">🔄 Auto-refresh: 15 min</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 5: ANALÍTICA PREDICTIVA -->
+        <section id="predictiva" class="section dark final-section">
+            <div class="container">
+                <span class="label">FASE 5 · ANALÍTICA PREDICTIVA</span>
+                <h2>El Siguiente Nivel: Machine Learning</h2>
+                <p class="section-desc">El DW no solo sirve para reportes históricos. Es la base de datos que alimenta
+                    modelos de ML para anticiparse al futuro.</p>
+
+                <div class="ml-scenarios">
+                    <div class="ml-card" id="mlCard1">
+                        <div class="ml-icon">🔮</div>
+                        <div class="ml-title">Forecast de Ventas</div>
+                        <div class="ml-desc">Modelo ARIMA / Prophet entrenado sobre <code>fact_ventas</code> para
+                            predecir demanda.</div>
+                        <div class="ml-chart-mini">
+                            <canvas id="chartForecast" width="280" height="120"></canvas>
+                        </div>
+                        <div class="ml-accuracy">Precisión: <strong>91.3% MAPE</strong></div>
+                        <button class="ml-run-btn" onclick="runModel('forecast')">▶ Simular Predicción</button>
+                    </div>
+                    <div class="ml-card" id="mlCard2">
+                        <div class="ml-icon">🧩</div>
+                        <div class="ml-title">Segmentación de Clientes</div>
+                        <div class="ml-desc">K-Means Clustering sobre <code>dim_clientes</code> para identificar
+                            micro-segmentos.</div>
+                        <div class="ml-chart-mini">
+                            <canvas id="chartClusters" width="280" height="120"></canvas>
+                        </div>
+                        <div class="ml-accuracy">Silhouette Score: <strong>0.73</strong></div>
+                        <button class="ml-run-btn" onclick="runModel('cluster')">▶ Simular Segmentación</button>
+                    </div>
+                    <div class="ml-card" id="mlCard3">
+                        <div class="ml-icon">⚠️</div>
+                        <div class="ml-title">Churn Prediction</div>
+                        <div class="ml-desc">Random Forest sobre historial de compras para detectar clientes en riesgo
+                            de abandono.</div>
+                        <div class="ml-chart-mini">
+                            <canvas id="chartChurn" width="280" height="120"></canvas>
+                        </div>
+                        <div class="ml-accuracy">AUC-ROC: <strong>0.89</strong></div>
+                        <button class="ml-run-btn" onclick="runModel('churn')">▶ Simular Análisis</button>
+                    </div>
+                </div>
+
+                <div class="usuarios-grid">
+                    <h3>👤 Usuarios del Ecosistema de Datos</h3>
+                    <div class="user-cards">
+                        <div class="user-card">
+                            <div class="user-icon">📊</div>
+                            <div class="user-role">Analista de BI</div>
+                            <div class="user-tool">Power BI · SQL</div>
+                            <div class="user-desc">Construye dashboards ejecutivos y reportes operativos con datos
+                                limpios del DW.</div>
+                        </div>
+                        <div class="user-card">
+                            <div class="user-icon">🧪</div>
+                            <div class="user-role">Data Scientist</div>
+                            <div class="user-tool">Python · R · Spark</div>
+                            <div class="user-desc">Entrena modelos predictivos y de NLP sobre el historial consolidado
+                                del DW.</div>
+                        </div>
+                        <div class="user-card">
+                            <div class="user-icon">🏢</div>
+                            <div class="user-role">Ejecutivo C-Level</div>
+                            <div class="user-tool">Mobile BI · Alertas</div>
+                            <div class="user-desc">Consume KPIs en tiempo real. Toma decisiones basadas en datos
+                                confiables.</div>
+                        </div>
+                        <div class="user-card">
+                            <div class="user-icon">⚙️</div>
+                            <div class="user-role">Ing. de Datos</div>
+                            <div class="user-tool">Python · dbt · Airflow</div>
+                            <div class="user-desc">Diseña y mantiene los pipelines ETL y la arquitectura del DW.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CTA FINAL -->
+                <div class="final-cta">
+                    <h3>¿Qué logramos con el Data Warehouse?</h3>
+                    <div class="benefits-grid">
+                        <div class="benefit-item"><span class="benefit-icon">✅</span><span>Una sola fuente de
+                                verdad</span></div>
+                        <div class="benefit-item"><span class="benefit-icon">✅</span><span>Reportes en minutos, no
+                                días</span></div>
+                        <div class="benefit-item"><span class="benefit-icon">✅</span><span>Datos históricos
+                                preservados</span></div>
+                        <div class="benefit-item"><span class="benefit-icon">✅</span><span>Base para modelos de
+                                ML/IA</span></div>
+                        <div class="benefit-item"><span class="benefit-icon">✅</span><span>Dashboards en Power BI
+                                dinámicos</span></div>
+                        <div class="benefit-item"><span class="benefit-icon">✅</span><span>Gobernanza y calidad de
+                                datos</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- SECCIÓN 6: CHATBOT DW -->
+        <section id="chatbot" class="section dark chatbot-section">
+            <div class="container">
+                <span class="label">FASE 6 · CONSULTA INTELIGENTE AL DATA WAREHOUSE</span>
+                <h2>Pregúntale al <span class="grad">Data Warehouse</span></h2>
+                <p class="section-desc">
+                    ¿Cómo usaría un gerente o analista el DW sin saber SQL? A través de una interfaz conversacional que
+                    traduce preguntas de negocio en consultas al modelo de datos — combinando datos
+                    <strong>estructurados</strong>
+                    (tablas, métricas) con datos <strong>no estructurados</strong> (emails, encuestas, notas de campo).
+                </p>
+
+                <!-- Explainer badge -->
+                <div class="chat-explainer">
+                    <div class="explainer-item">
+                        <span class="explainer-dot green"></span>
+                        <span><strong>Datos Estructurados:</strong> Tablas del DW (fact_ventas, dim_clientes,
+                            fact_inventario)</span>
+                    </div>
+                    <div class="explainer-item">
+                        <span class="explainer-dot amber"></span>
+                        <span><strong>Datos No Estructurados:</strong> Emails de clientes, encuestas NPS, notas de
+                            reuniones, redes sociales</span>
+                    </div>
+                </div>
+
+                <div class="chat-wrapper">
+                    <!-- Sidebar: Suggested Questions -->
+                    <div class="chat-sidebar">
+                        <div class="sidebar-title">💡 Preguntas frecuentes de negocio</div>
+                        <div class="question-chips">
+                            <button class="q-chip" onclick="askQuestion('ventas-mes')">📈 ¿Cómo van las ventas este
+                                mes?</button>
+                            <button class="q-chip" onclick="askQuestion('mejor-producto')">🏆 ¿Cuál es nuestro mejor
+                                producto?</button>
+                            <button class="q-chip" onclick="askQuestion('clientes-riesgo')">⚠️ ¿Qué clientes están en
+                                riesgo?</button>
+                            <button class="q-chip" onclick="askQuestion('canal-rentable')">💰 ¿Cuál canal es más
+                                rentable?</button>
+                            <button class="q-chip" onclick="askQuestion('satisfaccion')">⭐ ¿Cómo está la satisfacción
+                                del cliente?</button>
+                            <button class="q-chip" onclick="askQuestion('inventario')">📦 ¿Hay quiebres de
+                                stock?</button>
+                            <button class="q-chip" onclick="askQuestion('forecast')">🔮 ¿Cuánto venderemos el próximo
+                                mes?</button>
+                            <button class="q-chip" onclick="askQuestion('equipo-ventas')">👥 ¿Quiénes son los mejores
+                                vendedores?</button>
+                            <button class="q-chip" onclick="askQuestion('devolucion')">🔄 ¿Por qué aumentaron las
+                                devoluciones?</button>
+                            <button class="q-chip" onclick="askQuestion('region')">🗺️ ¿Qué región está creciendo
+                                más?</button>
+                        </div>
+                    </div>
+
+                    <!-- Chat window -->
+                    <div class="chat-window">
+                        <div class="chat-header">
+                            <div class="chat-avatar">🤖</div>
+                            <div class="chat-header-info">
+                                <div class="chat-name">Asistente DW Analytics</div>
+                                <div class="chat-status"><span class="status-dot"></span>Conectado al Data Warehouse
+                                </div>
+                            </div>
+                            <div class="chat-tables-badge">📊 6 tablas disponibles</div>
+                        </div>
+
+                        <div class="chat-messages" id="chatMessages">
+                            <!-- Welcome message -->
+                            <div class="chat-msg bot-msg">
+                                <div class="msg-avatar">🤖</div>
+                                <div class="msg-content">
+                                    <div class="msg-bubble">
+                                        <p>¡Hola! Soy tu asistente de analítica conectado directamente al <strong>Data
+                                                Warehouse</strong> de la empresa.</p>
+                                        <p style="margin-top:8px">Puedo responder preguntas de negocio combinando datos
+                                            de <span class="tag-green">ventas</span>, <span
+                                                class="tag-blue">clientes</span>, <span
+                                                class="tag-amber">inventario</span> y también insights de <span
+                                                class="tag-pink">encuestas y redes sociales</span>.</p>
+                                        <p style="margin-top:8px">👈 Selecciona una pregunta del panel izquierdo o
+                                            escribe la tuya abajo.</p>
+                                    </div>
+                                    <div class="msg-time">Ahora</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="chat-input-area">
+                            <input type="text" class="chat-input" id="chatInput"
+                                placeholder="Escribe tu pregunta de negocio..."
+                                onkeydown="if(event.key==='Enter') sendChat()">
+                            <button class="chat-send-btn" onclick="sendChat()">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                    <path d="M22 2L11 13" stroke="white" stroke-width="2" stroke-linecap="round" />
+                                    <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" stroke-width="2"
+                                        stroke-linecap="round" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="footer">
+        <div class="container footer-inner">
+            <div>📊 DataWH Sim — Simulación Didáctica de Data Warehousing</div>
+            <div class="footer-note">Presenta los conceptos de: Inmon · Kimball · Lakehouse Modern Architecture</div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
