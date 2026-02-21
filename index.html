@@ -18,7 +18,9 @@
     <header class="hero">
         <div class="hero-bg"></div>
         <nav class="nav">
-            <div class="logo">📊 DataWH Sim</div>
+            <div class="logo">
+                <img src="logo-itiers-data-sense-v2.png" alt="ITIERS Data Sense" class="nav-brand-logo">
+            </div>
             <div class="nav-links">
                 <a href="#problema">El Problema</a>
                 <a href="#arquitectura">Arquitectura</a>
@@ -268,6 +270,7 @@
                 <div class="dash-tabs">
                     <button class="dash-tab active" onclick="showDash('ventas')">📈 Ventas</button>
                     <button class="dash-tab" onclick="showDash('clientes')">👥 Clientes</button>
+                    <button class="dash-tab" onclick="showDash('geo')">🗺️ Geografía</button>
                     <button class="dash-tab" onclick="showDash('ops')">⚙️ Operaciones</button>
                 </div>
 
@@ -332,6 +335,40 @@
                             <div class="chart-box">
                                 <div class="chart-title">Nuevos Clientes por Mes</div>
                                 <canvas id="chartNuevos" width="340" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GEOGRAFÍA -->
+                    <div class="dash-panel" id="dash-geo">
+                        <div class="kpi-row">
+                            <div class="kpi-card">
+                                <div class="kpi-val" data-count="12">0</div>
+                                <div class="kpi-label">Provincias Activas</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-val" data-count="240500">0</div>
+                                <div class="kpi-label">Venta Región Top (GBA)</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-val pct" data-count="38">0</div>
+                                <div class="kpi-label">Crecimiento Patagonia %</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-val" data-count="45">0</div>
+                                <div class="kpi-label">Puntos de Entrega</div>
+                            </div>
+                        </div>
+                        <div class="chart-row">
+                            <div class="chart-box map-container-box">
+                                <div class="chart-title">Distribución de Ventas por Región (Argentina)</div>
+                                <div id="mapWrapper" class="map-wrapper">
+                                    <!-- SVG Map will be injected here -->
+                                </div>
+                            </div>
+                            <div class="chart-box">
+                                <div class="chart-title">Rendimiento por Zona</div>
+                                <canvas id="chartRegions" width="300" height="250"></canvas>
                             </div>
                         </div>
                     </div>
@@ -582,8 +619,12 @@
 
     <footer class="footer">
         <div class="container footer-inner">
-            <div>📊 DataWH Sim — Simulación Didáctica de Data Warehousing</div>
-            <div class="footer-note">Presenta los conceptos de: Inmon · Kimball · Lakehouse Modern Architecture</div>
+            <div class="footer-branding">
+                <img src="logo-itiers-data-sense-v2.png" alt="ITIERS Data Sense" class="footer-logo">
+                <span>Power by ITIERS Data Sense</span>
+            </div>
+            <div>📊 Data Warehouse Didactic Simulator</div>
+            <div class="footer-note">Conceptos: Inmon · Kimball · Modern Data Stack</div>
         </div>
     </footer>
 

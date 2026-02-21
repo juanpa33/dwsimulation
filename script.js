@@ -191,10 +191,15 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 function showDash(name) {
     document.querySelectorAll('.dash-panel').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.dash-tab').forEach(t => t.classList.remove('active'));
-    document.getElementById('dash-' + name).classList.add('active');
+    const panel = document.getElementById('dash-' + name);
+    if (panel) panel.classList.add('active');
+
     document.querySelectorAll('.dash-tab').forEach(t => {
-        if (t.textContent.toLowerCase().includes(name === 'ops' ? 'oper' : name)) t.classList.add('active');
+        const text = t.textContent.toLowerCase();
+        if (text.includes(name === 'ops' ? 'oper' : name === 'geo' ? 'geograf' : name)) t.classList.add('active');
     });
+
+    if (name === 'geo') initMap();
     animateKPIs();
 }
 
@@ -290,6 +295,60 @@ function buildCharts() {
         },
         options: { responsive: true, plugins: { legend: { position: 'top' } }, scales: { x: { grouped: true } } }
     });
+
+    // Radar/Polar: Geografia performance
+    new Chart(document.getElementById('chartRegions'), {
+        type: 'polarArea',
+        data: {
+            labels: ['CABA/GBA', 'Pampa', 'NOA', 'Patagonia', 'Cuyo', 'NEA'],
+            datasets: [{
+                data: [42, 28, 15, 38, 12, 10],
+                backgroundColor: [indigo + 'cc', cyan + 'cc', green + 'cc', amber + 'cc', pink + 'cc', '#8b5cf6cc']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'right', labels: { font: { size: 10 } } } },
+            scales: { r: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { display: false } } }
+        }
+    });
+}
+
+function initMap() {
+    const wrapper = document.getElementById('mapWrapper');
+    if (!wrapper || wrapper.innerHTML.includes('svg')) return;
+
+    // Simplified Argentina SVG Paths for visualization
+    const regions = [
+        { id: 'patagonia', name: 'Patagonia', d: 'M50,150 L100,150 L100,250 L30,250 Z', color: amber },
+        { id: 'gba', name: 'CABA / GBA', d: 'M110,120 L130,120 L130,140 L110,140 Z', color: indigo },
+        { id: 'pampa', name: 'Pampa', d: 'M80,100 L110,100 L120,150 L70,150 Z', color: cyan },
+        { id: 'noa', name: 'NOA', d: 'M40,20 L80,20 L80,70 L30,70 Z', color: green },
+        { id: 'cuyo', name: 'Cuyo', d: 'M30,70 L70,70 L80,130 L30,130 Z', color: pink },
+        { id: 'nea', name: 'NEA', d: 'M80,30 L130,30 L120,100 L80,100 Z', color: '#8b5cf6' }
+    ];
+
+    let svgHtml = `<svg viewBox="0 0 160 260" class="map-svg">`;
+    regions.forEach(r => {
+        svgHtml += `
+        <path d="${r.d}" class="map-region" id="reg-${r.id}" 
+              style="fill: ${r.color}22"
+              onmouseover="showMapTip('${r.name}', event)" 
+              onmouseout="hideMapTip()"/>`;
+    });
+    svgHtml += `</svg><div id="mapTooltip" style="position:fixed; display:none; background:rgba(0,0,0,0.8); padding:8px 12px; border-radius:6px; font-size:0.75rem; pointer-events:none; z-index:1000; border:1px solid var(--c-accent2)"></div>`;
+    wrapper.innerHTML = svgHtml;
+}
+
+function showMapTip(name, e) {
+    const tip = document.getElementById('mapTooltip');
+    tip.style.display = 'block';
+    tip.style.left = (e.clientX + 15) + 'px';
+    tip.style.top = (e.clientY + 15) + 'px';
+    tip.innerHTML = `<strong>Región: ${name}</strong><br>Ventas: $${(Math.random() * 100000 + 50000).toLocaleString()}<br>Crecimiento: +${(Math.random() * 20 + 5).toFixed(1)}%`;
+}
+function hideMapTip() {
+    document.getElementById('mapTooltip').style.display = 'none';
 }
 
 // ── ML MINI CHARTS ────────────────────────────────────────
