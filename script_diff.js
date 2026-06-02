@@ -1,0 +1,2013 @@
+--- script.js (原始)
+/* ========================================================
+   Data Warehouse Didactic Simulation — script.js
+   ======================================================== */
+
+// ── OPERATIONAL SYSTEMS: live data streams ─────────────────
+const systemDataGenerators = {
+    crm: () => {
+        const names = ['García J.', 'López M.', 'Martínez R.', 'Pérez A.', 'Sánchez L.'];
+        const acts = ['Oportunidad abierta', 'Lead calificado', 'Contrato firmado', 'Follow-up enviado'];
+        const n = names[Math.floor(Math.random() * names.length)];
+        const a = acts[Math.floor(Math.random() * acts.length)];
+        return `${n}\n${a}\n$${(Math.random() * 50000 + 5000).toFixed(0)}`;
+    },
+    erp: () => {
+        const items = ['Laptop Pro 15"', 'Monitor 4K', 'Teclado Mec.', 'Router WiFi 6', 'Switch 24P'];
+        const i = items[Math.floor(Math.random() * items.length)];
+        const qty = Math.floor(Math.random() * 100 + 1);
+        return `OC-${Math.floor(Math.random() * 90000 + 10000)}\n${i} x${qty}\nAlmacén B-${Math.floor(Math.random() * 5 + 1)}`;
+    },
+    ecom: () => {
+        const c = ['Buenos Aires', 'Córdoba', 'Rosario', 'Mendoza', 'Santiago'];
+        const city = c[Math.floor(Math.random() * c.length)];
+        const total = (Math.random() * 800 + 50).toFixed(2);
+        return `ORD-${Math.floor(Math.random() * 999999)}\n${city}\n$${total} USD`;
+    },
+    mktg: () => {
+        const ch = ['Meta Ads', 'Google Ads', 'Email', 'TikTok'];
+        const ch2 = ch[Math.floor(Math.random() * ch.length)];
+        const clicks = Math.floor(Math.random() * 5000 + 100);
+        const conv = (Math.random() * 5).toFixed(2);
+        return `${ch2}\n${clicks} clics\nConv: ${conv}%`;
+    },
+    fin: () => {
+        const types = ['Factura', 'NC', 'Pago', 'Devol.', 'Gasto'];
+        const t = types[Math.floor(Math.random() * types.length)];
+        return `TXN-${Math.floor(Math.random() * 999999)}\n${t}\n$${(Math.random() * 20000).toFixed(2)}`;
+    },
+    sc: () => {
+        const status = ['En tránsito', 'Despachado', 'Recibido', 'Demorado'];
+        const s = status[Math.floor(Math.random() * status.length)];
+        const sku = `SKU-${Math.floor(Math.random() * 9000 + 1000)}`;
+        return `${sku}\n${s}\n${Math.floor(Math.random() * 200 + 10)} unid`;
+    }
+};
+
+function startSystemFeeds() {
+    const ids = ['crm', 'erp', 'ecom', 'mktg', 'fin', 'sc'];
+    ids.forEach(id => {
+        const el = document.getElementById(id + 'Data');
+        if (!el) return;
+        function tick() {
+            el.textContent = systemDataGenerators[id]();
+            el.style.animation = 'none';
+            el.offsetHeight; // reflow
+            el.style.animation = 'dataFlash 0.3s ease';
+        }
+        tick();
+        setInterval(tick, 1500 + Math.random() * 2000);
+    });
+}
+
+// Add flash animation via style injection
+const style = document.createElement('style');
+style.textContent = `@keyframes dataFlash { 0%{opacity:0.3;color:#fff} 100%{opacity:1;color:#4ade80} }`;
+document.head.appendChild(style);
+
+// ── ETL SIMULATION ─────────────────────────────────────────
+let etlRunning = false;
+
+const etlSteps = {
+    extract: [
+        '→ Conectando a CRM (Salesforce API)...',
+        '→ Extrayendo tabla clientes...    ✓',
+        '→ Conectando a ERP (SAP BAPI)...',
+        '→ Extrayendo órdenes de compra...  ✓',
+        '→ Conectando E-Com REST API...',
+        '→ Extrayendo transacciones...     ✓',
+        '→ Conectando Marketing API...',
+        '→ Extrayendo métricas ads...      ✓',
+        '→ Extrayendo datos financieros... ✓',
+        '→ Extrayendo logs supply chain... ✓'
+    ],
+    transform: [
+        '✦ Estandarizando formatos de fecha...',
+        '✦ Eliminando registros duplicados...',
+        '✦ Normalizando monedas a USD...',
+        '✦ Validando integridad referencial...',
+        '✦ Aplicando reglas de negocio...',
+        '✦ Calculando KPIs derivados...',
+        '✦ Enriqueciendo datos de clientes...',
+        '✦ Mapeando dimensiones DW...',
+        '✦ Control de calidad (DQ Rules)... ✓',
+        '✦ Datos listos para carga. ✓'
+    ],
+    load: [
+        '★ Conectando a DW (Snowflake)...',
+        '★ Cargando dim_clientes...        ✓',
+        '★ Cargando dim_producto...        ✓',
+        '★ Cargando dim_canal...           ✓',
+        '★ Cargando dim_tiempo...          ✓',
+        '★ Cargando fact_ventas...         ✓',
+        '★ Cargando fact_inventario...     ✓',
+        '★ Actualizando índices...         ✓',
+        '★ Refrescando Data Marts...       ✓',
+        '★ ETL completado con éxito! 🎉'
+    ]
+};
+
+const dwRows = [
+    ['20260220', 'CLI-4421', 'PRD-889', 'E-Com', '1,240.00', '8', '42.3'],
+    ['20260220', 'CLI-1103', 'PRD-224', 'Tienda', '560.00', '2', '38.1'],
+    ['20260220', 'CLI-7789', 'PRD-556', 'Online', '3,200.00', '16', '45.7'],
+    ['20260219', 'CLI-3310', 'PRD-112', 'Mayorista', '8,900.00', '50', '28.2'],
+    ['20260219', 'CLI-9901', 'PRD-773', 'E-Com', '420.00', '3', '51.0'],
+    ['20260218', 'CLI-5500', 'PRD-441', 'Tienda', '980.00', '7', '40.5'],
+    ['20260218', 'CLI-2211', 'PRD-667', 'Online', '2,100.00', '10', '47.2'],
+];
+
+async function runETL() {
+    if (etlRunning) return;
+    etlRunning = true;
+    document.getElementById('btnRunETL').disabled = true;
+
+    const stages = ['Extract', 'Transform', 'Load'];
+    const logIds = ['extractLog', 'transformLog', 'loadLog'];
+    const metricIds = ['extractRows', 'transformRows', 'loadRows'];
+    const stageIds = ['stageExtract', 'stageTransform', 'stageLoad'];
+    const metricVals = ['295,847 registros', '289,312 registros limpios', '289,312 cargados al DW'];
+    const statusMsgs = ['EXTRACTANDO datos de 6 sistemas...', 'TRANSFORMANDO y limpiando datos...', 'CARGANDO al Data Warehouse...'];
+    const stepKeys = ['extract', 'transform', 'load'];
+
+    for (let i = 0; i < 3; i++) {
+        document.getElementById('etlStatus').textContent = statusMsgs[i];
+        const stage = document.getElementById(stageIds[i]);
+        stage.classList.add('active');
+        const log = document.getElementById(logIds[i]);
+        log.textContent = '';
+
+        const steps = etlSteps[stepKeys[i]];
+        for (let s = 0; s < steps.length; s++) {
+            await sleep(280);
+            log.textContent += steps[s] + '\n';
+            log.scrollTop = log.scrollHeight;
+        }
+        await sleep(300);
+        document.getElementById(metricIds[i]).textContent = metricVals[i];
+        stage.classList.remove('active');
+        stage.classList.add('done');
+        await sleep(400);
+    }
+
+    document.getElementById('etlStatus').textContent = '✅ ETL finalizado — DW actualizado';
+
+    // Show DW preview
+    const preview = document.getElementById('dwPreview');
+    preview.style.display = 'block';
+    const tbody = document.getElementById('dwTableBody');
+    tbody.innerHTML = '';
+    for (let r = 0; r < dwRows.length; r++) {
+        await sleep(150);
+        const tr = document.createElement('tr');
+        tr.classList.add('new-row');
+        tr.innerHTML = dwRows[r].map(c => `<td>${c}</td>`).join('');
+        tbody.appendChild(tr);
+    }
+
+    etlRunning = false;
+    document.getElementById('btnRunETL').disabled = false;
+}
+
+function resetETL() {
+    etlRunning = false;
+    document.getElementById('btnRunETL').disabled = false;
+    document.getElementById('etlStatus').textContent = 'Listo para ejecutar';
+    ['extractLog', 'transformLog', 'loadLog'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = ''; });
+    ['extractRows', 'transformRows', 'loadRows'].forEach((id, i) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = ['0 registros', '0 registros limpios', '0 cargados al DW'][i];
+    });
+    ['stageExtract', 'stageTransform', 'stageLoad'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.classList.remove('active', 'done'); }
+    });
+    const p = document.getElementById('dwPreview');
+    if (p) p.style.display = 'none';
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── DASHBOARD TABS ─────────────────────────────────────────
+function showDash(name) {
+    document.querySelectorAll('.dash-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.dash-tab').forEach(t => t.classList.remove('active'));
+    const panel = document.getElementById('dash-' + name);
+    if (panel) panel.classList.add('active');
+
+    document.querySelectorAll('.dash-tab').forEach(t => {
+        const text = t.textContent.toLowerCase();
+        if (text.includes(name === 'ops' ? 'oper' : name === 'geo' ? 'geograf' : name)) t.classList.add('active');
+    });
+
+    if (name === 'geo') initMap();
+    animateKPIs();
+}
+
+function animateKPIs() {
+    document.querySelectorAll('.dash-panel.active .kpi-val').forEach(el => {
+        const target = parseInt(el.dataset.count);
+        const isPct = el.classList.contains('pct');
+        let current = 0;
+        const inc = target / 50;
+        const interval = setInterval(() => {
+            current = Math.min(current + inc, target);
+            el.textContent = isPct ? Math.round(current) + '%' : Math.round(current).toLocaleString();
+            if (current >= target) clearInterval(interval);
+        }, 20);
+    });
+}
+
+// ── CHART.JS CHARTS ────────────────────────────────────────
+const indigo = '#6366f1';
+const cyan = '#06b6d4';
+const green = '#10b981';
+const amber = '#f59e0b';
+const pink = '#ec4899';
+
+function buildCharts() {
+    Chart.defaults.color = '#94a3b8';
+    Chart.defaults.borderColor = 'rgba(255,255,255,0.07)';
+    Chart.defaults.font.family = 'Inter';
+
+    // Bar: Ventas por mes
+    new Chart(document.getElementById('chartVentas'), {
+        type: 'bar',
+        data: {
+            labels: ['Ago', 'Sep', 'Oct', 'Nov', 'Dic', 'Ene', 'Feb'],
+            datasets: [{
+                label: 'Ventas USD',
+                data: [320000, 380000, 410000, 520000, 680000, 430000, 495000],
+                backgroundColor: ctx => {
+                    const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 200);
+                    g.addColorStop(0, indigo); g.addColorStop(1, 'rgba(99,102,241,0.2)');
+                    return g;
+                },
+                borderRadius: 6, borderSkipped: false
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => '$' + v.toLocaleString() } } } }
+    });
+
+    // Doughnut: Canal
+    new Chart(document.getElementById('chartCanal'), {
+        type: 'doughnut',
+        data: {
+            labels: ['E-Commerce', 'Tienda', 'Mayorista', 'Online'],
+            datasets: [{ data: [45, 25, 18, 12], backgroundColor: [indigo, cyan, green, amber], borderWidth: 0, hoverOffset: 8 }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { padding: 12, font: { size: 11 } } } } }
+    });
+
+    // Doughnut: Segmentos
+    new Chart(document.getElementById('chartSegmentos'), {
+        type: 'pie',
+        data: {
+            labels: ['Champions', 'Leales', 'Potenciales', 'En riesgo', 'Perdidos'],
+            datasets: [{ data: [22, 30, 25, 15, 8], backgroundColor: [green, indigo, cyan, amber, pink], borderWidth: 0 }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { padding: 10, font: { size: 11 } } } } }
+    });
+
+    // Line: Nuevos clientes
+    new Chart(document.getElementById('chartNuevos'), {
+        type: 'line',
+        data: {
+            labels: ['Ago', 'Sep', 'Oct', 'Nov', 'Dic', 'Ene', 'Feb'],
+            datasets: [{
+                label: 'Nuevos Clientes',
+                data: [1200, 1450, 1380, 1900, 2300, 1600, 1750],
+                borderColor: cyan, backgroundColor: 'rgba(6,182,212,0.1)',
+                fill: true, tension: 0.4, pointBackgroundColor: cyan, pointRadius: 4
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+    });
+
+    // Bar grouped: Inventario vs Demanda
+    new Chart(document.getElementById('chartOps'), {
+        type: 'bar',
+        data: {
+            labels: ['Laptops', 'Monitores', 'Teclados', 'Routers', 'Switches', 'Cámaras', 'Auriculares'],
+            datasets: [
+                { label: 'Stock', data: [450, 320, 780, 230, 180, 120, 560], backgroundColor: indigo, borderRadius: 4 },
+                { label: 'Demanda (30d)', data: [380, 360, 620, 290, 150, 200, 480], backgroundColor: cyan, borderRadius: 4 }
+            ]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'top' } }, scales: { x: { grouped: true } } }
+    });
+
+    // Radar/Polar: Geografia performance
+    new Chart(document.getElementById('chartRegions'), {
+        type: 'polarArea',
+        data: {
+            labels: ['CABA/GBA', 'Pampa', 'NOA', 'Patagonia', 'Cuyo', 'NEA'],
+            datasets: [{
+                data: [42, 28, 15, 38, 12, 10],
+                backgroundColor: [indigo + 'cc', cyan + 'cc', green + 'cc', amber + 'cc', pink + 'cc', '#8b5cf6cc']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'right', labels: { font: { size: 10 } } } },
+            scales: { r: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { display: false } } }
+        }
+    });
+}
+
+function initMap() {
+    const wrapper = document.getElementById('mapWrapper');
+    if (!wrapper || wrapper.innerHTML.includes('svg')) return;
+
+    // Simplified Argentina SVG Paths for visualization
+    const regions = [
+        { id: 'patagonia', name: 'Patagonia', d: 'M50,150 L100,150 L100,250 L30,250 Z', color: amber },
+        { id: 'gba', name: 'CABA / GBA', d: 'M110,120 L130,120 L130,140 L110,140 Z', color: indigo },
+        { id: 'pampa', name: 'Pampa', d: 'M80,100 L110,100 L120,150 L70,150 Z', color: cyan },
+        { id: 'noa', name: 'NOA', d: 'M40,20 L80,20 L80,70 L30,70 Z', color: green },
+        { id: 'cuyo', name: 'Cuyo', d: 'M30,70 L70,70 L80,130 L30,130 Z', color: pink },
+        { id: 'nea', name: 'NEA', d: 'M80,30 L130,30 L120,100 L80,100 Z', color: '#8b5cf6' }
+    ];
+
+    let svgHtml = `<svg viewBox="0 0 160 260" class="map-svg">`;
+    regions.forEach(r => {
+        svgHtml += `
+        <path d="${r.d}" class="map-region" id="reg-${r.id}"
+              style="fill: ${r.color}22"
+              onmouseover="showMapTip('${r.name}', event)"
+              onmouseout="hideMapTip()"/>`;
+    });
+    svgHtml += `</svg><div id="mapTooltip" style="position:fixed; display:none; background:rgba(0,0,0,0.8); padding:8px 12px; border-radius:6px; font-size:0.75rem; pointer-events:none; z-index:1000; border:1px solid var(--c-accent2)"></div>`;
+    wrapper.innerHTML = svgHtml;
+}
+
+function showMapTip(name, e) {
+    const tip = document.getElementById('mapTooltip');
+    tip.style.display = 'block';
+    tip.style.left = (e.clientX + 15) + 'px';
+    tip.style.top = (e.clientY + 15) + 'px';
+    tip.innerHTML = `<strong>Región: ${name}</strong><br>Ventas: $${(Math.random() * 100000 + 50000).toLocaleString()}<br>Crecimiento: +${(Math.random() * 20 + 5).toFixed(1)}%`;
+}
+function hideMapTip() {
+    document.getElementById('mapTooltip').style.display = 'none';
+}
+
+// ── ML MINI CHARTS ────────────────────────────────────────
+function buildMLCharts() {
+    // Forecast
+    const fcLabels = ['Ene', 'Feb', 'Mar', 'Abr'];
+    new Chart(document.getElementById('chartForecast'), {
+        type: 'line',
+        data: {
+            labels: [...['Oct', 'Nov', 'Dic'], ...fcLabels],
+            datasets: [
+                { label: 'Real', data: [420, 510, 680, null, null, null, null], borderColor: cyan, tension: 0.4, pointRadius: 3 },
+                { label: 'Forecast', data: [null, null, 680, 700, 740, 780, 820], borderColor: amber, borderDash: [5, 5], tension: 0.4, pointRadius: 3, pointStyle: 'triangle' }
+            ]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, padding: 8 } } }, scales: { x: { ticks: { font: { size: 10 } } }, y: { display: false } } }
+    });
+
+    // Clusters scatter
+    const clusters = [
+        { label: 'VIP', data: Array.from({ length: 20 }, () => ({ x: 80 + Math.random() * 18, y: 80 + Math.random() * 18 })), backgroundColor: 'rgba(99,102,241,0.7)' },
+        { label: 'Recurrentes', data: Array.from({ length: 30 }, () => ({ x: 40 + Math.random() * 25, y: 40 + Math.random() * 25 })), backgroundColor: 'rgba(6,182,212,0.7)' },
+        { label: 'Ocasionales', data: Array.from({ length: 25 }, () => ({ x: 10 + Math.random() * 25, y: 10 + Math.random() * 25 })), backgroundColor: 'rgba(16,185,129,0.7)' },
+    ];
+    new Chart(document.getElementById('chartClusters'), {
+        type: 'scatter',
+        data: { datasets: clusters },
+        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, padding: 6 } } }, scales: { x: { display: false }, y: { display: false } } }
+    });
+
+    // Churn bar
+    new Chart(document.getElementById('chartChurn'), {
+        type: 'bar',
+        data: {
+            labels: ['Bajo', 'Medio', 'Alto', 'Crítico'],
+            datasets: [{
+                label: 'Clientes',
+                data: [18500, 9200, 3800, 1200],
+                backgroundColor: [green, amber, 'rgba(249,115,22,0.8)', pink],
+                borderRadius: 5
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { font: { size: 10 } } }, y: { display: false } } }
+    });
+}
+
+// ── ML MODEL SIMULATION ────────────────────────────────────
+function runModel(type) {
+    const messages = {
+        forecast: ['🔄 Cargando fact_ventas del DW...', '📊 Ajustando modelo Prophet...', '🔮 Proyectando 90 días...', '✅ Forecast: $2.4M próximo trimestre (±8%)'],
+        cluster: ['🔄 Extrayendo dim_clientes del DW...', '🧮 Ejecutando K-Means (k=4)...', '🗺️ Proyectando en 2D (UMAP)...', '✅ 4 segmentos identificados. Silhouette=0.73'],
+        churn: ['🔄 Consultando historial de compras DW...', '🌲 Entrenando Random Forest (100 árboles)...', '📈 Evaluando curva ROC...', '✅ 1,200 clientes en riesgo crítico detectados']
+    };
+    const cards = { forecast: 'mlCard1', cluster: 'mlCard2', churn: 'mlCard3' };
+    const card = document.getElementById(cards[type]);
+    const btn = card.querySelector('.ml-run-btn');
+    const desc = card.querySelector('.ml-desc');
+    const msgs = messages[type];
+    let i = 0;
+    btn.disabled = true;
+    card.style.borderColor = '#6366f1';
+    function next() {
+        if (i < msgs.length) {
+            desc.textContent = msgs[i++];
+            setTimeout(next, 700);
+        } else {
+            btn.disabled = false;
+            card.style.borderColor = '#10b981';
+        }
+    }
+    next();
+}
+
+// ── INIT ────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    startSystemFeeds();
+    buildCharts();
+    buildMLCharts();
+    animateKPIs();
+
+    // Intersection observer to animate KPIs on scroll
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(e => { if (e.isIntersecting) animateKPIs(); });
+    }, { threshold: 0.3 });
+    document.querySelectorAll('.dash-container').forEach(el => observer.observe(el));
+});
+
+// ═══════════════════════════════════════════════════════════
+// ── CHATBOT: DW QUERY ENGINE ───────────────────────────────
+// ═══════════════════════════════════════════════════════════
+
+const dwKnowledge = {
+    'ventas-mes': {
+        query: '¿Cómo van las ventas este mes?',
+        tables: ['fact_ventas', 'dim_tiempo', 'dim_canal'],
+        response: `
+      <div class="dw-query-trace"><span class="trace-label">🔍 DW Query →</span><span class="trace-table">fact_ventas</span><span class="trace-table">dim_tiempo</span><span class="trace-table">dim_canal</span></div>
+      <p><strong>Febrero 2026 — Resumen de Ventas:</strong></p>
+      <div class="metric-grid">
+        <div class="metric-item"><div class="metric-val">$495,200</div><div class="metric-lbl">Total ventas mes</div></div>
+        <div class="metric-item"><div class="metric-val">+15.3%</div><div class="metric-lbl">vs mes anterior</div></div>
+        <div class="metric-item"><div class="metric-val">18,432</div><div class="metric-lbl">Órdenes procesadas</div></div>
+        <div class="metric-item"><div class="metric-val">$154</div><div class="metric-lbl">Ticket promedio</div></div>
+      </div>
+      <p style="margin:10px 0 6px"><strong>Distribución por canal:</strong></p>
+      <div class="insight-bar"><div class="insight-bar-label"><span>E-Commerce</span><span>45% · $222,840</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:45%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Tienda Física</span><span>25% · $123,800</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:25%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Mayorista</span><span>18% · $89,136</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:18%"></div></div></div>
+      <div class="success-box">✅ E-Commerce superó su meta mensual de $200K por segundo mes consecutivo.</div>`
+    },
+    'mejor-producto': {
+        query: '¿Cuál es nuestro mejor producto?',
+        tables: ['fact_ventas', 'dim_producto'],
+        response: `
+      <div class="dw-query-trace"><span class="trace-label">🔍 DW Query →</span><span class="trace-table">fact_ventas</span><span class="trace-table">dim_producto</span></div>
+      <p><strong>Top 5 Productos por Ingresos — Últimos 90 días:</strong></p>
+      <div class="insight-bar"><div class="insight-bar-label"><span>🥇 Laptop Pro 15" (SKU-889)</span><span>$148,320 · 28%</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:90%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>🥈 Monitor UltraWide 4K</span><span>$89,210 · 17%</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:60%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>🥉 Router WiFi 6 Pro</span><span>$67,440 · 13%</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:45%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Switch Giga 24P</span><span>$51,890 · 10%</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:35%"></div></div></div>
+      <div class="unstructured-box">
+        <div class="unstructured-label">💬 RESEÑAS DE CLIENTES · Google / Tienda online</div>
+        <div class="quote-item">"La Laptop Pro 15 es increíble. Rapidez de entrega y muy buen precio." — Carlos M. ⭐⭐⭐⭐⭐</div>
+        <div class="quote-item">"El Monitor 4K cambió mi trabajo remoto. Ya compré 3 para mi equipo." — Ana R., LinkedIn</div>
+      </div>`
+    },
+    'clientes-riesgo': {
+        query: '¿Qué clientes están en riesgo de abandono?',
+        tables: ['dim_clientes', 'fact_ventas', 'ml_churn_scores'],
+        response: `
+      <div class="dw-query-trace"><span class="trace-label">🔍 DW Query →</span><span class="trace-table">dim_clientes</span><span class="trace-table">ml_churn_scores</span></div>
+      <p><strong>Modelo Churn — Random Forest (AUC 0.89):</strong></p>
+      <div class="metric-grid">
+        <div class="metric-item"><div class="metric-val">1,200</div><div class="metric-lbl">Clientes riesgo crítico</div></div>
+        <div class="metric-item"><div class="metric-val">2.8%</div><div class="metric-lbl">Del total de cartera</div></div>
+        <div class="metric-item"><div class="metric-val">$184K</div><div class="metric-lbl">Ingresos en riesgo</div></div>
+        <div class="metric-item"><div class="metric-val">47 días</div><div class="metric-lbl">Promedio sin comprar</div></div>
+      </div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Sin compra &gt;45 días</span><span>68% de los casos</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:68%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Ticket caído &gt;50%</span><span>45% de los casos</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:45%"></div></div></div>
+      <div class="unstructured-box">
+        <div class="unstructured-label">📧 TICKETS DE SOPORTE · NLP sobre CRM</div>
+        <div class="quote-item">"Llevo 2 meses esperando resolución de mi garantía. Considero buscar otro proveedor." — CRM Ticket #44213</div>
+        <div class="quote-item">"Los precios subieron mucho. Estamos evaluando alternativas." — Email CLI-7812</div>
+      </div>
+      <div class="alert-box">⚠️ Acción: Activar campaña de retención con descuento 15% para los 1,200 clientes en riesgo.</div>`
+    },
+    'canal-rentable': {
+        query: '¿Cuál canal es más rentable?',
+        tables: ['fact_ventas', 'dim_canal', 'fact_costos'],
+        response: `
+      <div class="dw-query-trace"><span class="trace-label">🔍 DW Query →</span><span class="trace-table">fact_ventas</span><span class="trace-table">fact_costos</span><span class="trace-table">dim_canal</span></div>
+      <p><strong>Rentabilidad por Canal (Margen Bruto %):</strong></p>
+      <div class="insight-bar"><div class="insight-bar-label"><span>💎 E-Commerce Propio</span><span>Margen: 51% · $222,840</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:95%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>🏪 Tienda Física</span><span>Margen: 38% · $123,800</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:70%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>🌐 Marketplace</span><span>Margen: 31% · $59,424</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:56%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>🏭 Mayorista</span><span>Margen: 22% · $89,136</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:38%"></div></div></div>
+      <div class="success-box">💡 E-Commerce genera el doble de margen que Mayorista. Redirigir inversión puede aumentar utilidad neta un 12% sin subir ventas.</div>`
+    },
+    'satisfaccion': {
+        query: '¿Cómo está la satisfacción del cliente?',
+        tables: ['fact_encuestas', 'dim_clientes', 'social_listening'],
+        response: `
+      <div class="dw-query-trace"><span class="trace-label">🔍 DW Query →</span><span class="trace-table">fact_encuestas</span><span class="trace-table">social_listening</span></div>
+      <div class="metric-grid">
+        <div class="metric-item"><div class="metric-val">72</div><div class="metric-lbl">NPS Score (🟢 Excelente)</div></div>
+        <div class="metric-item"><div class="metric-val">4.3/5</div><div class="metric-lbl">CSAT Promedio</div></div>
+        <div class="metric-item"><div class="metric-val">78%</div><div class="metric-lbl">Tasa de retención</div></div>
+        <div class="metric-item"><div class="metric-val">89%</div><div class="metric-lbl">Resolución 1er contacto</div></div>
+      </div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Clientes VIP</span><span>NPS: 88</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:88%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Clientes Recurrentes</span><span>NPS: 71</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:71%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Clientes Ocasionales</span><span>NPS: 54</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:54%"></div></div></div>
+      <div class="unstructured-box">
+        <div class="unstructured-label">📱 SOCIAL LISTENING · Twitter / Instagram / Google Reviews</div>
+        <div class="quote-item">"Llevamos 2 años con ellos y siempre nos sorprenden. Servicio posventa top." — Google ⭐⭐⭐⭐⭐</div>
+        <div class="quote-item">"El tiempo de entrega mejoró muchísimo este año. Muy contentos." — Instagram DM</div>
+        <div class="quote-item">"Tuve un problema y lo resolvieron en 2 horas. Eso es lo que busco." — Twitter/X</div>
+      </div>`
+    },
+    'inventario': {
+        query: '¿Hay quiebres de stock?',
+        tables: ['fact_inventario', 'dim_producto', 'fact_ventas'],
+        response: `
+      <div class="dw-query-trace"><span class="trace-label">🔍 DW Query →</span><span class="trace-table">fact_inventario</span><span class="trace-table">dim_producto</span></div>
+      <div class="metric-grid">
+        <div class="metric-item"><div class="metric-val">97%</div><div class="metric-lbl">Fill Rate global</div></div>
+        <div class="metric-item"><div class="metric-val">7</div><div class="metric-lbl">SKUs en alerta roja</div></div>
+        <div class="metric-item"><div class="metric-val">$34K</div><div class="metric-lbl">Ventas perdidas est.</div></div>
+        <div class="metric-item"><div class="metric-val">2.1 días</div><div class="metric-lbl">Lead time promedio</div></div>
+      </div>
+      <p style="margin:10px 0 6px"><strong>Productos en riesgo de quiebre:</strong></p>
+      <div class="insight-bar"><div class="insight-bar-label"><span>⚠️ Monitor 4K (SKU-224) — Stock: 40 | Demanda 30d: 360</span><span>11%</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:11%;background:linear-gradient(90deg,#ec4899,#f59e0b)"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>⚠️ Router WiFi 6 (SKU-556) — Stock: 55 | Demanda 30d: 290</span><span>19%</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:19%;background:linear-gradient(90deg,#ec4899,#f59e0b)"></div></div></div>
+      <div class="unstructured-box">
+        <div class="unstructured-label">📋 NOTAS INTERNAS · Sharepoint / Slack #compras</div>
+        <div class="quote-item">"Proveedor Samsung confirmó demora 3 semanas por problemas en aduana. Afecta Monitor 4K." — Nota reunión 18-Feb</div>
+      </div>
+      <div class="alert-box">🚨 Sin reposición del Monitor 4K en 7 días, se pierden $28,000 en ventas proyectadas.</div>`
+    },
+    'forecast': {
+        query: '¿Cuánto venderemos el próximo mes?',
+        tables: ['fact_ventas', 'ml_forecasts', 'dim_tiempo'],
+        response: `
+      <div class="dw-query-trace"><span class="trace-label">🔍 DW Query →</span><span class="trace-table">ml_forecasts</span><span class="trace-table">fact_ventas</span></div>
+      <p><strong>Pronóstico Marzo 2026 — Modelo Prophet v3 (24 meses de historial):</strong></p>
+      <div class="metric-grid">
+        <div class="metric-item"><div class="metric-val">$542,000</div><div class="metric-lbl">Forecast central</div></div>
+        <div class="metric-item"><div class="metric-val">±8.7%</div><div class="metric-lbl">Intervalo de confianza</div></div>
+        <div class="metric-item"><div class="metric-val">+9.4%</div><div class="metric-lbl">vs Febrero 2026</div></div>
+        <div class="metric-item"><div class="metric-val">91.3%</div><div class="metric-lbl">Precisión MAPE del modelo</div></div>
+      </div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>E-Commerce</span><span>$244,000 (+10%)</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:85%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Tienda Física</span><span>$135,000 (+9%)</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:55%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Mayorista</span><span>$98,000 (+10%)</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:40%"></div></div></div>
+      <div class="unstructured-box">
+        <div class="unstructured-label">📊 CONTEXTO EXTERNO · Fuentes no estructuradas del modelo</div>
+        <div class="quote-item">Índice de actividad INDEC: +2.1% previsto Q1 2026</div>
+        <div class="quote-item">Google Trends "laptops gaming": +34% en 4 semanas en Argentina</div>
+      </div>
+      <div class="success-box">✅ Preparar 110% del stock habitual para cubrir la demanda proyectada.</div>`
+    },
+    'equipo-ventas': {
+        query: '¿Quiénes son los mejores vendedores?',
+        tables: ['fact_ventas', 'dim_vendedor'],
+        response: `
+      <div class="dw-query-trace"><span class="trace-label">🔍 DW Query →</span><span class="trace-table">fact_ventas</span><span class="trace-table">dim_vendedor</span></div>
+      <p><strong>Ranking Vendedores — Ene-Feb 2026:</strong></p>
+      <div class="insight-bar"><div class="insight-bar-label"><span>🥇 Carlos Mendez</span><span>$182,400 · 87 cierres</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:95%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>🥈 Valentina Ríos</span><span>$164,200 · 79 cierres</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:85%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>🥉 Martín Torres</span><span>$138,700 · 65 cierres</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:72%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Ana González</span><span>$98,100 · 51 cierres</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:50%"></div></div></div>
+      <div class="metric-grid" style="margin-top:12px">
+        <div class="metric-item"><div class="metric-val">62%</div><div class="metric-lbl">Tasa conversión top 3</div></div>
+        <div class="metric-item"><div class="metric-val">$2,096</div><div class="metric-lbl">Ticket prom. C.Mendez</div></div>
+      </div>
+      <div class="unstructured-box">
+        <div class="unstructured-label">📋 NOTAS DE REUNIÓN · Teams / Notion</div>
+        <div class="quote-item">"Carlos cerró contraro TechCorp por $48K anuales. Clave: 3 semanas de seguimiento personalizado." — Reunión ventas 14-Feb</div>
+        <div class="quote-item">"Valentina capacita a los nuevos con metodología consultiva. Está elevando al equipo."  — Review Q1</div>
+      </div>`
+    },
+    'devolucion': {
+        query: '¿Por qué aumentaron las devoluciones?',
+        tables: ['fact_devoluciones', 'dim_producto', 'soporte_tickets'],
+        response: `
+      <div class="dw-query-trace"><span class="trace-label">🔍 DW Query →</span><span class="trace-table">fact_devoluciones</span><span class="trace-table">soporte_tickets</span></div>
+      <div class="metric-grid">
+        <div class="metric-item"><div class="metric-val">12%</div><div class="metric-lbl">Tasa devoluciones Feb</div></div>
+        <div class="metric-item"><div class="metric-val">+4.2%</div><div class="metric-lbl">vs Enero (era 7.8%)</div></div>
+        <div class="metric-item"><div class="metric-val">847</div><div class="metric-lbl">Devoluciones registradas</div></div>
+        <div class="metric-item"><div class="metric-val">$52,400</div><div class="metric-lbl">Monto devuelto</div></div>
+      </div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Producto defectuoso</span><span>38% · 321 casos</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:80%;background:linear-gradient(90deg,#ec4899,#6366f1)"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Descripción no coincide</span><span>27% · 229 casos</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:55%;background:linear-gradient(90deg,#f59e0b,#6366f1)"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Daño en envío</span><span>21% · 178 casos</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:42%;background:linear-gradient(90deg,#f59e0b,#6366f1)"></div></div></div>
+      <div class="unstructured-box">
+        <div class="unstructured-label">📧 TICKETS Y EMAILS · Análisis NLP automático</div>
+        <div class="quote-item">"El Router se recalienta y se reinicia solo. Es imposible trabajar así." — Ticket #55321</div>
+        <div class="quote-item">"La foto mostraba 3 puertos USB pero el equipo tiene solo 1. Me siento engañado." — Google 1⭐</div>
+        <div class="quote-item">"La caja llegó aplastada. La empresa logística que usan es un desastre." — Email 17-Feb</div>
+      </div>
+      <div class="alert-box">🚨 38% de defectos se concentra en lote LOTE-2026-02-A del proveedor Shenz-Tech. Revisar QC urgente.</div>`
+    },
+    'region': {
+        query: '¿Qué región está creciendo más?',
+        tables: ['fact_ventas', 'dim_geografia', 'dim_tiempo'],
+        response: `
+      <div class="dw-query-trace"><span class="trace-label">🔍 DW Query →</span><span class="trace-table">fact_ventas</span><span class="trace-table">dim_geografia</span></div>
+      <p><strong>Crecimiento por Región — Febrero vs Enero 2026:</strong></p>
+      <div class="insight-bar"><div class="insight-bar-label"><span>🚀 Patagonia Argentina</span><span>+38.4% · $48,200</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:95%;background:linear-gradient(90deg,#10b981,#06b6d4)"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>📈 NOA (Noroeste)</span><span>+24.1% · $62,400</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:70%;background:linear-gradient(90deg,#10b981,#06b6d4)"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>📈 Chile — Santiago</span><span>+19.7% · $88,700</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:58%;background:linear-gradient(90deg,#6366f1,#06b6d4)"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>➡️ Buenos Aires GBA</span><span>+8.3% · $198,400</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:40%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>⬇️ Córdoba Capital</span><span>-3.1% · $97,500</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:15%;background:linear-gradient(90deg,#ec4899,#f59e0b)"></div></div></div>
+      <div class="unstructured-box">
+        <div class="unstructured-label">🗺️ INFORMES DE CAMPO · Gerentes Zonales</div>
+        <div class="quote-item">"Apertura de oficina en Rawson impulsó ventas corporativas en Patagonia." — Reporte Zonal Feb 2026</div>
+        <div class="quote-item">"Córdoba baja por competencia de precio distribuidor local. Evaluar estrategia." — Dirección Comercial</div>
+      </div>
+      <div class="success-box">💡 Reforzar Patagonia con 1 vendedor dedicado. ROI proyectado en 4 meses.</div>`
+    }
+};
+
+// ── FUZZY MATCHING ─────────────────────────────────────────
+function matchQuestion(text) {
+    const t = text.toLowerCase();
+    if (t.match(/venta|mes|factur|ingreso|revenue/)) return 'ventas-mes';
+    if (t.match(/product|mejor|top|rendimiento|sku/)) return 'mejor-producto';
+    if (t.match(/riesgo|churn|abandon|perder|fuga/)) return 'clientes-riesgo';
+    if (t.match(/canal|rentab|margin|profit/)) return 'canal-rentable';
+    if (t.match(/satisfac|nps|csat|opinion/)) return 'satisfaccion';
+    if (t.match(/stock|inventario|quiebre|falta/)) return 'inventario';
+    if (t.match(/forecast|predic|próximo|futuro|cuánto.*vend/)) return 'forecast';
+    if (t.match(/vendedor|equipo|comercial|seller/)) return 'equipo-ventas';
+    if (t.match(/devolu|cambio|quejas|reclamo/)) return 'devolucion';
+    if (t.match(/region|ciudad|zona|geografí/)) return 'region';
+    return null;
+}
+
+// ── CHAT ENGINE ────────────────────────────────────────────
+function askQuestion(key) {
+    document.querySelectorAll('.q-chip').forEach(c => c.classList.remove('active'));
+    if (event && event.target) event.target.classList.add('active');
+    const entry = dwKnowledge[key];
+    if (!entry) return;
+    addUserMessage(entry.query);
+    simulateResponse(key);
+}
+
+function sendChat() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    addUserMessage(text);
+    input.value = '';
+    const key = matchQuestion(text);
+    key ? simulateResponse(key) : simulateUnknown();
+}
+
+function addUserMessage(text) {
+    const msgs = document.getElementById('chatMessages');
+    const now = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    const div = document.createElement('div');
+    div.className = 'chat-msg user-msg';
+    div.innerHTML = `<div class="msg-avatar">👤</div><div class="msg-content"><div class="msg-bubble">${text}</div><div class="msg-time">${now}</div></div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+}
+
+async function simulateResponse(key) {
+    const msgs = document.getElementById('chatMessages');
+    const typing = document.createElement('div');
+    typing.className = 'chat-msg bot-msg';
+    typing.innerHTML = `<div class="msg-avatar">🤖</div><div class="msg-content"><div class="msg-bubble" style="padding:8px 16px"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div><div style="font-size:0.7rem;color:#64748b;margin-top:4px">Consultando Data Warehouse...</div></div></div>`;
+    msgs.appendChild(typing);
+    msgs.scrollTop = msgs.scrollHeight;
+
+    await sleep(1600 + Math.random() * 700);
+    typing.remove();
+
+    const entry = dwKnowledge[key];
+    const now = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    const div = document.createElement('div');
+    div.className = 'chat-msg bot-msg';
+    div.innerHTML = `<div class="msg-avatar">🤖</div><div class="msg-content"><div class="msg-bubble">${entry.response}</div><div class="msg-time">${now} · Fuentes: ${entry.tables.join(', ')}</div></div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+
+    setTimeout(() => {
+        div.querySelectorAll('.insight-bar-fill').forEach(bar => {
+            const w = bar.style.width;
+            bar.style.width = '0%';
+            setTimeout(() => { bar.style.width = w; }, 80);
+        });
+    }, 200);
+}
+
+function simulateUnknown() {
+    const msgs = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = 'chat-msg bot-msg';
+    div.innerHTML = `<div class="msg-avatar">🤖</div><div class="msg-content"><div class="msg-bubble">
+    <p>No encontré datos exactos para eso en el DW. 😔</p>
+    <p style="margin-top:8px">Prueba preguntando sobre: <span class="tag-green">ventas</span>, <span class="tag-blue">clientes en riesgo</span>, <span class="tag-amber">inventario</span>, <span class="tag-pink">satisfacción</span>, <span class="tag-blue">forecast</span>, <span class="tag-green">devoluciones</span> o <span class="tag-amber">regiones</span>.<br><br>O usa los botones sugeridos del panel izquierdo 👈</p>
+  </div></div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+}
+
++++ script.js (修改后)
+/* ========================================================
+   Data Warehouse Didactic Simulation — script.js
+   ======================================================== */
+
+// ── OPERATIONAL SYSTEMS: live data streams ─────────────────
+const systemDataGenerators = {
+    crm: () => {
+        const names = ['García J.', 'López M.', 'Martínez R.', 'Pérez A.', 'Sánchez L.'];
+        const acts = ['Oportunidad abierta', 'Lead calificado', 'Contrato firmado', 'Follow-up enviado'];
+        const n = names[Math.floor(Math.random() * names.length)];
+        const a = acts[Math.floor(Math.random() * acts.length)];
+        return `${n}\n${a}\n$${(Math.random() * 50000 + 5000).toFixed(0)}`;
+    },
+    erp: () => {
+        const items = ['Laptop Pro 15"', 'Monitor 4K', 'Teclado Mec.', 'Router WiFi 6', 'Switch 24P'];
+        const i = items[Math.floor(Math.random() * items.length)];
+        const qty = Math.floor(Math.random() * 100 + 1);
+        return `OC-${Math.floor(Math.random() * 90000 + 10000)}\n${i} x${qty}\nAlmacén B-${Math.floor(Math.random() * 5 + 1)}`;
+    },
+    ecom: () => {
+        const c = ['Buenos Aires', 'Córdoba', 'Rosario', 'Mendoza', 'Santiago'];
+        const city = c[Math.floor(Math.random() * c.length)];
+        const total = (Math.random() * 800 + 50).toFixed(2);
+        return `ORD-${Math.floor(Math.random() * 999999)}\n${city}\n$${total} USD`;
+    },
+    mktg: () => {
+        const ch = ['Meta Ads', 'Google Ads', 'Email', 'TikTok'];
+        const ch2 = ch[Math.floor(Math.random() * ch.length)];
+        const clicks = Math.floor(Math.random() * 5000 + 100);
+        const conv = (Math.random() * 5).toFixed(2);
+        return `${ch2}\n${clicks} clics\nConv: ${conv}%`;
+    },
+    fin: () => {
+        const types = ['Factura', 'NC', 'Pago', 'Devol.', 'Gasto'];
+        const t = types[Math.floor(Math.random() * types.length)];
+        return `TXN-${Math.floor(Math.random() * 999999)}\n${t}\n$${(Math.random() * 20000).toFixed(2)}`;
+    },
+    sc: () => {
+        const status = ['En tránsito', 'Despachado', 'Recibido', 'Demorado'];
+        const s = status[Math.floor(Math.random() * status.length)];
+        const sku = `SKU-${Math.floor(Math.random() * 9000 + 1000)}`;
+        return `${sku}\n${s}\n${Math.floor(Math.random() * 200 + 10)} unid`;
+    }
+};
+
+function startSystemFeeds() {
+    const ids = ['crm', 'erp', 'ecom', 'mktg', 'fin', 'sc'];
+    ids.forEach(id => {
+        const el = document.getElementById(id + 'Data');
+        if (!el) return;
+        function tick() {
+            el.textContent = systemDataGenerators[id]();
+            el.style.animation = 'none';
+            el.offsetHeight; // reflow
+            el.style.animation = 'dataFlash 0.3s ease';
+        }
+        tick();
+        setInterval(tick, 1500 + Math.random() * 2000);
+    });
+}
+
+// Add flash animation via style injection
+const style = document.createElement('style');
+style.textContent = `@keyframes dataFlash { 0%{opacity:0.3;color:#fff} 100%{opacity:1;color:#4ade80} }`;
+document.head.appendChild(style);
+
+// ── ETL SIMULATION ─────────────────────────────────────────
+let etlRunning = false;
+
+const etlSteps = {
+    extract: [
+        '→ Conectando a CRM (Salesforce API)...',
+        '→ Extrayendo tabla clientes...    ✓',
+        '→ Conectando a ERP (SAP BAPI)...',
+        '→ Extrayendo órdenes de compra...  ✓',
+        '→ Conectando E-Com REST API...',
+        '→ Extrayendo transacciones...     ✓',
+        '→ Conectando Marketing API...',
+        '→ Extrayendo métricas ads...      ✓',
+        '→ Extrayendo datos financieros... ✓',
+        '→ Extrayendo logs supply chain... ✓'
+    ],
+    transform: [
+        '✦ Estandarizando formatos de fecha...',
+        '✦ Eliminando registros duplicados...',
+        '✦ Normalizando monedas a USD...',
+        '✦ Validando integridad referencial...',
+        '✦ Aplicando reglas de negocio...',
+        '✦ Calculando KPIs derivados...',
+        '✦ Enriqueciendo datos de clientes...',
+        '✦ Mapeando dimensiones DW...',
+        '✦ Control de calidad (DQ Rules)... ✓',
+        '✦ Datos listos para carga. ✓'
+    ],
+    load: [
+        '★ Conectando a DW (Snowflake)...',
+        '★ Cargando dim_clientes...        ✓',
+        '★ Cargando dim_producto...        ✓',
+        '★ Cargando dim_canal...           ✓',
+        '★ Cargando dim_tiempo...          ✓',
+        '★ Cargando fact_ventas...         ✓',
+        '★ Cargando fact_inventario...     ✓',
+        '★ Actualizando índices...         ✓',
+        '★ Refrescando Data Marts...       ✓',
+        '★ ETL completado con éxito! 🎉'
+    ]
+};
+
+const dwRows = [
+    ['20260220', 'CLI-4421', 'PRD-889', 'E-Com', '1,240.00', '8', '42.3'],
+    ['20260220', 'CLI-1103', 'PRD-224', 'Tienda', '560.00', '2', '38.1'],
+    ['20260220', 'CLI-7789', 'PRD-556', 'Online', '3,200.00', '16', '45.7'],
+    ['20260219', 'CLI-3310', 'PRD-112', 'Mayorista', '8,900.00', '50', '28.2'],
+    ['20260219', 'CLI-9901', 'PRD-773', 'E-Com', '420.00', '3', '51.0'],
+    ['20260218', 'CLI-5500', 'PRD-441', 'Tienda', '980.00', '7', '40.5'],
+    ['20260218', 'CLI-2211', 'PRD-667', 'Online', '2,100.00', '10', '47.2'],
+];
+
+async function runETL() {
+    if (etlRunning) return;
+    etlRunning = true;
+    document.getElementById('btnRunETL').disabled = true;
+
+    const stages = ['Extract', 'Transform', 'Load'];
+    const logIds = ['extractLog', 'transformLog', 'loadLog'];
+    const metricIds = ['extractRows', 'transformRows', 'loadRows'];
+    const stageIds = ['stageExtract', 'stageTransform', 'stageLoad'];
+    const metricVals = ['295,847 registros', '289,312 registros limpios', '289,312 cargados al DW'];
+    const statusMsgs = ['EXTRACTANDO datos de 6 sistemas...', 'TRANSFORMANDO y limpiando datos...', 'CARGANDO al Data Warehouse...'];
+    const stepKeys = ['extract', 'transform', 'load'];
+
+    for (let i = 0; i < 3; i++) {
+        document.getElementById('etlStatus').textContent = statusMsgs[i];
+        const stage = document.getElementById(stageIds[i]);
+        stage.classList.add('active');
+        const log = document.getElementById(logIds[i]);
+        log.textContent = '';
+
+        const steps = etlSteps[stepKeys[i]];
+        for (let s = 0; s < steps.length; s++) {
+            await sleep(280);
+            log.textContent += steps[s] + '\n';
+            log.scrollTop = log.scrollHeight;
+        }
+        await sleep(300);
+        document.getElementById(metricIds[i]).textContent = metricVals[i];
+        stage.classList.remove('active');
+        stage.classList.add('done');
+        await sleep(400);
+    }
+
+    document.getElementById('etlStatus').textContent = '✅ ETL finalizado — DW actualizado';
+
+    // Show DW preview
+    const preview = document.getElementById('dwPreview');
+    preview.style.display = 'block';
+    const tbody = document.getElementById('dwTableBody');
+    tbody.innerHTML = '';
+    for (let r = 0; r < dwRows.length; r++) {
+        await sleep(150);
+        const tr = document.createElement('tr');
+        tr.classList.add('new-row');
+        tr.innerHTML = dwRows[r].map(c => `<td>${c}</td>`).join('');
+        tbody.appendChild(tr);
+    }
+
+    etlRunning = false;
+    document.getElementById('btnRunETL').disabled = false;
+}
+
+function resetETL() {
+    etlRunning = false;
+    document.getElementById('btnRunETL').disabled = false;
+    document.getElementById('etlStatus').textContent = 'Listo para ejecutar';
+    ['extractLog', 'transformLog', 'loadLog'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = ''; });
+    ['extractRows', 'transformRows', 'loadRows'].forEach((id, i) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = ['0 registros', '0 registros limpios', '0 cargados al DW'][i];
+    });
+    ['stageExtract', 'stageTransform', 'stageLoad'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.classList.remove('active', 'done'); }
+    });
+    const p = document.getElementById('dwPreview');
+    if (p) p.style.display = 'none';
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── DASHBOARD TABS ─────────────────────────────────────────
+function showDash(name) {
+    document.querySelectorAll('.dash-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.dash-tab').forEach(t => t.classList.remove('active'));
+    const panel = document.getElementById('dash-' + name);
+    if (panel) panel.classList.add('active');
+
+    document.querySelectorAll('.dash-tab').forEach(t => {
+        const text = t.textContent.toLowerCase();
+        if (text.includes(name === 'ops' ? 'oper' : name === 'geo' ? 'geograf' : name)) t.classList.add('active');
+    });
+
+    if (name === 'geo') initMap();
+    animateKPIs();
+}
+
+function animateKPIs() {
+    document.querySelectorAll('.dash-panel.active .kpi-val').forEach(el => {
+        const target = parseInt(el.dataset.count);
+        const isPct = el.classList.contains('pct');
+        let current = 0;
+        const inc = target / 50;
+        const interval = setInterval(() => {
+            current = Math.min(current + inc, target);
+            el.textContent = isPct ? Math.round(current) + '%' : Math.round(current).toLocaleString();
+            if (current >= target) clearInterval(interval);
+        }, 20);
+    });
+}
+
+// ── CHART.JS CHARTS ────────────────────────────────────────
+const indigo = '#6366f1';
+const cyan = '#06b6d4';
+const green = '#10b981';
+const amber = '#f59e0b';
+const pink = '#ec4899';
+
+function buildCharts() {
+    Chart.defaults.color = '#94a3b8';
+    Chart.defaults.borderColor = 'rgba(255,255,255,0.07)';
+    Chart.defaults.font.family = 'Inter';
+
+    // Bar: Ventas por mes
+    new Chart(document.getElementById('chartVentas'), {
+        type: 'bar',
+        data: {
+            labels: ['Ago', 'Sep', 'Oct', 'Nov', 'Dic', 'Ene', 'Feb'],
+            datasets: [{
+                label: 'Ventas USD',
+                data: [320000, 380000, 410000, 520000, 680000, 430000, 495000],
+                backgroundColor: ctx => {
+                    const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 200);
+                    g.addColorStop(0, indigo); g.addColorStop(1, 'rgba(99,102,241,0.2)');
+                    return g;
+                },
+                borderRadius: 6, borderSkipped: false
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => '$' + v.toLocaleString() } } } }
+    });
+
+    // Doughnut: Canal
+    new Chart(document.getElementById('chartCanal'), {
+        type: 'doughnut',
+        data: {
+            labels: ['E-Commerce', 'Tienda', 'Mayorista', 'Online'],
+            datasets: [{ data: [45, 25, 18, 12], backgroundColor: [indigo, cyan, green, amber], borderWidth: 0, hoverOffset: 8 }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { padding: 12, font: { size: 11 } } } } }
+    });
+
+    // Doughnut: Segmentos
+    new Chart(document.getElementById('chartSegmentos'), {
+        type: 'pie',
+        data: {
+            labels: ['Champions', 'Leales', 'Potenciales', 'En riesgo', 'Perdidos'],
+            datasets: [{ data: [22, 30, 25, 15, 8], backgroundColor: [green, indigo, cyan, amber, pink], borderWidth: 0 }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { padding: 10, font: { size: 11 } } } } }
+    });
+
+    // Line: Nuevos clientes
+    new Chart(document.getElementById('chartNuevos'), {
+        type: 'line',
+        data: {
+            labels: ['Ago', 'Sep', 'Oct', 'Nov', 'Dic', 'Ene', 'Feb'],
+            datasets: [{
+                label: 'Nuevos Clientes',
+                data: [1200, 1450, 1380, 1900, 2300, 1600, 1750],
+                borderColor: cyan, backgroundColor: 'rgba(6,182,212,0.1)',
+                fill: true, tension: 0.4, pointBackgroundColor: cyan, pointRadius: 4
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+    });
+
+    // Bar grouped: Inventario vs Demanda
+    new Chart(document.getElementById('chartOps'), {
+        type: 'bar',
+        data: {
+            labels: ['Laptops', 'Monitores', 'Teclados', 'Routers', 'Switches', 'Cámaras', 'Auriculares'],
+            datasets: [
+                { label: 'Stock', data: [450, 320, 780, 230, 180, 120, 560], backgroundColor: indigo, borderRadius: 4 },
+                { label: 'Demanda (30d)', data: [380, 360, 620, 290, 150, 200, 480], backgroundColor: cyan, borderRadius: 4 }
+            ]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'top' } }, scales: { x: { grouped: true } } }
+    });
+
+    // Radar/Polar: Geografia performance
+    new Chart(document.getElementById('chartRegions'), {
+        type: 'polarArea',
+        data: {
+            labels: ['CABA/GBA', 'Pampa', 'NOA', 'Patagonia', 'Cuyo', 'NEA'],
+            datasets: [{
+                data: [42, 28, 15, 38, 12, 10],
+                backgroundColor: [indigo + 'cc', cyan + 'cc', green + 'cc', amber + 'cc', pink + 'cc', '#8b5cf6cc']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'right', labels: { font: { size: 10 } } } },
+            scales: { r: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { display: false } } }
+        }
+    });
+}
+
+function initMap() {
+    const wrapper = document.getElementById('mapWrapper');
+    if (!wrapper || wrapper.innerHTML.includes('svg')) return;
+
+    // Simplified Argentina SVG Paths for visualization
+    const regions = [
+        { id: 'patagonia', name: 'Patagonia', d: 'M50,150 L100,150 L100,250 L30,250 Z', color: amber },
+        { id: 'gba', name: 'CABA / GBA', d: 'M110,120 L130,120 L130,140 L110,140 Z', color: indigo },
+        { id: 'pampa', name: 'Pampa', d: 'M80,100 L110,100 L120,150 L70,150 Z', color: cyan },
+        { id: 'noa', name: 'NOA', d: 'M40,20 L80,20 L80,70 L30,70 Z', color: green },
+        { id: 'cuyo', name: 'Cuyo', d: 'M30,70 L70,70 L80,130 L30,130 Z', color: pink },
+        { id: 'nea', name: 'NEA', d: 'M80,30 L130,30 L120,100 L80,100 Z', color: '#8b5cf6' }
+    ];
+
+    let svgHtml = `<svg viewBox="0 0 160 260" class="map-svg">`;
+    regions.forEach(r => {
+        svgHtml += `
+        <path d="${r.d}" class="map-region" id="reg-${r.id}"
+              style="fill: ${r.color}22"
+              onmouseover="showMapTip('${r.name}', event)"
+              onmouseout="hideMapTip()"/>`;
+    });
+    svgHtml += `</svg><div id="mapTooltip" style="position:fixed; display:none; background:rgba(0,0,0,0.8); padding:8px 12px; border-radius:6px; font-size:0.75rem; pointer-events:none; z-index:1000; border:1px solid var(--c-accent2)"></div>`;
+    wrapper.innerHTML = svgHtml;
+}
+
+function showMapTip(name, e) {
+    const tip = document.getElementById('mapTooltip');
+    tip.style.display = 'block';
+    tip.style.left = (e.clientX + 15) + 'px';
+    tip.style.top = (e.clientY + 15) + 'px';
+    tip.innerHTML = `<strong>Región: ${name}</strong><br>Ventas: $${(Math.random() * 100000 + 50000).toLocaleString()}<br>Crecimiento: +${(Math.random() * 20 + 5).toFixed(1)}%`;
+}
+function hideMapTip() {
+    document.getElementById('mapTooltip').style.display = 'none';
+}
+
+// ── ML MINI CHARTS ────────────────────────────────────────
+function buildMLCharts() {
+    // Forecast
+    const fcLabels = ['Ene', 'Feb', 'Mar', 'Abr'];
+    new Chart(document.getElementById('chartForecast'), {
+        type: 'line',
+        data: {
+            labels: [...['Oct', 'Nov', 'Dic'], ...fcLabels],
+            datasets: [
+                { label: 'Real', data: [420, 510, 680, null, null, null, null], borderColor: cyan, tension: 0.4, pointRadius: 3 },
+                { label: 'Forecast', data: [null, null, 680, 700, 740, 780, 820], borderColor: amber, borderDash: [5, 5], tension: 0.4, pointRadius: 3, pointStyle: 'triangle' }
+            ]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, padding: 8 } } }, scales: { x: { ticks: { font: { size: 10 } } }, y: { display: false } } }
+    });
+
+    // Clusters scatter
+    const clusters = [
+        { label: 'VIP', data: Array.from({ length: 20 }, () => ({ x: 80 + Math.random() * 18, y: 80 + Math.random() * 18 })), backgroundColor: 'rgba(99,102,241,0.7)' },
+        { label: 'Recurrentes', data: Array.from({ length: 30 }, () => ({ x: 40 + Math.random() * 25, y: 40 + Math.random() * 25 })), backgroundColor: 'rgba(6,182,212,0.7)' },
+        { label: 'Ocasionales', data: Array.from({ length: 25 }, () => ({ x: 10 + Math.random() * 25, y: 10 + Math.random() * 25 })), backgroundColor: 'rgba(16,185,129,0.7)' },
+    ];
+    new Chart(document.getElementById('chartClusters'), {
+        type: 'scatter',
+        data: { datasets: clusters },
+        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, padding: 6 } } }, scales: { x: { display: false }, y: { display: false } } }
+    });
+
+    // Churn bar
+    new Chart(document.getElementById('chartChurn'), {
+        type: 'bar',
+        data: {
+            labels: ['Bajo', 'Medio', 'Alto', 'Crítico'],
+            datasets: [{
+                label: 'Clientes',
+                data: [18500, 9200, 3800, 1200],
+                backgroundColor: [green, amber, 'rgba(249,115,22,0.8)', pink],
+                borderRadius: 5
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { font: { size: 10 } } }, y: { display: false } } }
+    });
+}
+
+// ── ML MODEL SIMULATION ────────────────────────────────────
+function runModel(type) {
+    const messages = {
+        forecast: ['🔄 Cargando fact_ventas del DW...', '📊 Ajustando modelo Prophet...', '🔮 Proyectando 90 días...', '✅ Forecast: $2.4M próximo trimestre (±8%)'],
+        cluster: ['🔄 Extrayendo dim_clientes del DW...', '🧮 Ejecutando K-Means (k=4)...', '🗺️ Proyectando en 2D (UMAP)...', '✅ 4 segmentos identificados. Silhouette=0.73'],
+        churn: ['🔄 Consultando historial de compras DW...', '🌲 Entrenando Random Forest (100 árboles)...', '📈 Evaluando curva ROC...', '✅ 1,200 clientes en riesgo crítico detectados']
+    };
+    const cards = { forecast: 'mlCard1', cluster: 'mlCard2', churn: 'mlCard3' };
+    const card = document.getElementById(cards[type]);
+    const btn = card.querySelector('.ml-run-btn');
+    const desc = card.querySelector('.ml-desc');
+    const msgs = messages[type];
+    let i = 0;
+    btn.disabled = true;
+    card.style.borderColor = '#6366f1';
+    function next() {
+        if (i < msgs.length) {
+            desc.textContent = msgs[i++];
+            setTimeout(next, 700);
+        } else {
+            btn.disabled = false;
+            card.style.borderColor = '#10b981';
+        }
+    }
+    next();
+}
+
+// ── INIT ────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    startSystemFeeds();
+    buildCharts();
+    buildMLCharts();
+    animateKPIs();
+    animateHeroStats();
+
+    // Intersection observer to animate KPIs on scroll
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(e => { if (e.isIntersecting) animateKPIs(); });
+    }, { threshold: 0.3 });
+    document.querySelectorAll('.dash-container').forEach(el => observer.observe(el));
+});
+
+// Hero Stats Animation
+function animateHeroStats() {
+    document.querySelectorAll('.hero-stats .stat-num').forEach(el => {
+        const target = parseInt(el.dataset.count);
+        let current = 0;
+        const inc = target / 60;
+        const interval = setInterval(() => {
+            current = Math.min(current + inc, target);
+            el.textContent = Math.round(current).toLocaleString();
+            if (current >= target) clearInterval(interval);
+        }, 25);
+    });
+}
+
+// ═══════════════════════════════════════════════════════════
+// ── CHATBOT: DW QUERY ENGINE ───────────────────────────────
+// ═══════════════════════════════════════════════════════════
+
+const dwKnowledge = {
+    'ventas-mes': {
+        query: '¿Cómo van las ventas este mes?',
+        tables: ['fact_ventas', 'dim_tiempo', 'dim_canal'],
+        response: `
+      <div class="dw-query-trace"><span class="trace-label">🔍 DW Query →</span><span class="trace-table">fact_ventas</span><span class="trace-table">dim_tiempo</span><span class="trace-table">dim_canal</span></div>
+      <p><strong>Febrero 2026 — Resumen de Ventas:</strong></p>
+      <div class="metric-grid">
+        <div class="metric-item"><div class="metric-val">$495,200</div><div class="metric-lbl">Total ventas mes</div></div>
+        <div class="metric-item"><div class="metric-val">+15.3%</div><div class="metric-lbl">vs mes anterior</div></div>
+        <div class="metric-item"><div class="metric-val">18,432</div><div class="metric-lbl">Órdenes procesadas</div></div>
+        <div class="metric-item"><div class="metric-val">$154</div><div class="metric-lbl">Ticket promedio</div></div>
+      </div>
+      <p style="margin:10px 0 6px"><strong>Distribución por canal:</strong></p>
+      <div class="insight-bar"><div class="insight-bar-label"><span>E-Commerce</span><span>45% · $222,840</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:45%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Tienda Física</span><span>25% · $123,800</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:25%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Mayorista</span><span>18% · $89,136</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:18%"></div></div></div>
+      <div class="success-box">✅ E-Commerce superó su meta mensual de $200K por segundo mes consecutivo.</div>`
+    },
+    'mejor-producto': {
+        query: '¿Cuál es nuestro mejor producto?',
+        tables: ['fact_ventas', 'dim_producto'],
+        response: `
+      <div class="dw-query-trace"><span class="trace-label">🔍 DW Query →</span><span class="trace-table">fact_ventas</span><span class="trace-table">dim_producto</span></div>
+      <p><strong>Top 5 Productos por Ingresos — Últimos 90 días:</strong></p>
+      <div class="insight-bar"><div class="insight-bar-label"><span>🥇 Laptop Pro 15" (SKU-889)</span><span>$148,320 · 28%</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:90%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>🥈 Monitor UltraWide 4K</span><span>$89,210 · 17%</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:60%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>🥉 Router WiFi 6 Pro</span><span>$67,440 · 13%</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:45%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Switch Giga 24P</span><span>$51,890 · 10%</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:35%"></div></div></div>
+      <div class="unstructured-box">
+        <div class="unstructured-label">💬 RESEÑAS DE CLIENTES · Google / Tienda online</div>
+        <div class="quote-item">"La Laptop Pro 15 es increíble. Rapidez de entrega y muy buen precio." — Carlos M. ⭐⭐⭐⭐⭐</div>
+        <div class="quote-item">"El Monitor 4K cambió mi trabajo remoto. Ya compré 3 para mi equipo." — Ana R., LinkedIn</div>
+      </div>`
+    },
+    'clientes-riesgo': {
+        query: '¿Qué clientes están en riesgo de abandono?',
+        tables: ['dim_clientes', 'fact_ventas', 'ml_churn_scores'],
+        response: `
+      <div class="dw-query-trace"><span class="trace-label">🔍 DW Query →</span><span class="trace-table">dim_clientes</span><span class="trace-table">ml_churn_scores</span></div>
+      <p><strong>Modelo Churn — Random Forest (AUC 0.89):</strong></p>
+      <div class="metric-grid">
+        <div class="metric-item"><div class="metric-val">1,200</div><div class="metric-lbl">Clientes riesgo crítico</div></div>
+        <div class="metric-item"><div class="metric-val">2.8%</div><div class="metric-lbl">Del total de cartera</div></div>
+        <div class="metric-item"><div class="metric-val">$184K</div><div class="metric-lbl">Ingresos en riesgo</div></div>
+        <div class="metric-item"><div class="metric-val">47 días</div><div class="metric-lbl">Promedio sin comprar</div></div>
+      </div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Sin compra &gt;45 días</span><span>68% de los casos</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:68%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Ticket caído &gt;50%</span><span>45% de los casos</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:45%"></div></div></div>
+      <div class="unstructured-box">
+        <div class="unstructured-label">📧 TICKETS DE SOPORTE · NLP sobre CRM</div>
+        <div class="quote-item">"Llevo 2 meses esperando resolución de mi garantía. Considero buscar otro proveedor." — CRM Ticket #44213</div>
+        <div class="quote-item">"Los precios subieron mucho. Estamos evaluando alternativas." — Email CLI-7812</div>
+      </div>
+      <div class="alert-box">⚠️ Acción: Activar campaña de retención con descuento 15% para los 1,200 clientes en riesgo.</div>`
+    },
+    'canal-rentable': {
+        query: '¿Cuál canal es más rentable?',
+        tables: ['fact_ventas', 'dim_canal', 'fact_costos'],
+        response: `
+      <div class="dw-query-trace"><span class="trace-label">🔍 DW Query →</span><span class="trace-table">fact_ventas</span><span class="trace-table">fact_costos</span><span class="trace-table">dim_canal</span></div>
+      <p><strong>Rentabilidad por Canal (Margen Bruto %):</strong></p>
+      <div class="insight-bar"><div class="insight-bar-label"><span>💎 E-Commerce Propio</span><span>Margen: 51% · $222,840</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:95%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>🏪 Tienda Física</span><span>Margen: 38% · $123,800</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:70%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>🌐 Marketplace</span><span>Margen: 31% · $59,424</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:56%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>🏭 Mayorista</span><span>Margen: 22% · $89,136</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:38%"></div></div></div>
+      <div class="success-box">💡 E-Commerce genera el doble de margen que Mayorista. Redirigir inversión puede aumentar utilidad neta un 12% sin subir ventas.</div>`
+    },
+    'satisfaccion': {
+        query: '¿Cómo está la satisfacción del cliente?',
+        tables: ['fact_encuestas', 'dim_clientes', 'social_listening'],
+        response: `
+      <div class="dw-query-trace"><span class="trace-label">🔍 DW Query →</span><span class="trace-table">fact_encuestas</span><span class="trace-table">social_listening</span></div>
+      <div class="metric-grid">
+        <div class="metric-item"><div class="metric-val">72</div><div class="metric-lbl">NPS Score (🟢 Excelente)</div></div>
+        <div class="metric-item"><div class="metric-val">4.3/5</div><div class="metric-lbl">CSAT Promedio</div></div>
+        <div class="metric-item"><div class="metric-val">78%</div><div class="metric-lbl">Tasa de retención</div></div>
+        <div class="metric-item"><div class="metric-val">89%</div><div class="metric-lbl">Resolución 1er contacto</div></div>
+      </div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Clientes VIP</span><span>NPS: 88</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:88%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Clientes Recurrentes</span><span>NPS: 71</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:71%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Clientes Ocasionales</span><span>NPS: 54</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:54%"></div></div></div>
+      <div class="unstructured-box">
+        <div class="unstructured-label">📱 SOCIAL LISTENING · Twitter / Instagram / Google Reviews</div>
+        <div class="quote-item">"Llevamos 2 años con ellos y siempre nos sorprenden. Servicio posventa top." — Google ⭐⭐⭐⭐⭐</div>
+        <div class="quote-item">"El tiempo de entrega mejoró muchísimo este año. Muy contentos." — Instagram DM</div>
+        <div class="quote-item">"Tuve un problema y lo resolvieron en 2 horas. Eso es lo que busco." — Twitter/X</div>
+      </div>`
+    },
+    'inventario': {
+        query: '¿Hay quiebres de stock?',
+        tables: ['fact_inventario', 'dim_producto', 'fact_ventas'],
+        response: `
+      <div class="dw-query-trace"><span class="trace-label">🔍 DW Query →</span><span class="trace-table">fact_inventario</span><span class="trace-table">dim_producto</span></div>
+      <div class="metric-grid">
+        <div class="metric-item"><div class="metric-val">97%</div><div class="metric-lbl">Fill Rate global</div></div>
+        <div class="metric-item"><div class="metric-val">7</div><div class="metric-lbl">SKUs en alerta roja</div></div>
+        <div class="metric-item"><div class="metric-val">$34K</div><div class="metric-lbl">Ventas perdidas est.</div></div>
+        <div class="metric-item"><div class="metric-val">2.1 días</div><div class="metric-lbl">Lead time promedio</div></div>
+      </div>
+      <p style="margin:10px 0 6px"><strong>Productos en riesgo de quiebre:</strong></p>
+      <div class="insight-bar"><div class="insight-bar-label"><span>⚠️ Monitor 4K (SKU-224) — Stock: 40 | Demanda 30d: 360</span><span>11%</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:11%;background:linear-gradient(90deg,#ec4899,#f59e0b)"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>⚠️ Router WiFi 6 (SKU-556) — Stock: 55 | Demanda 30d: 290</span><span>19%</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:19%;background:linear-gradient(90deg,#ec4899,#f59e0b)"></div></div></div>
+      <div class="unstructured-box">
+        <div class="unstructured-label">📋 NOTAS INTERNAS · Sharepoint / Slack #compras</div>
+        <div class="quote-item">"Proveedor Samsung confirmó demora 3 semanas por problemas en aduana. Afecta Monitor 4K." — Nota reunión 18-Feb</div>
+      </div>
+      <div class="alert-box">🚨 Sin reposición del Monitor 4K en 7 días, se pierden $28,000 en ventas proyectadas.</div>`
+    },
+    'forecast': {
+        query: '¿Cuánto venderemos el próximo mes?',
+        tables: ['fact_ventas', 'ml_forecasts', 'dim_tiempo'],
+        response: `
+      <div class="dw-query-trace"><span class="trace-label">🔍 DW Query →</span><span class="trace-table">ml_forecasts</span><span class="trace-table">fact_ventas</span></div>
+      <p><strong>Pronóstico Marzo 2026 — Modelo Prophet v3 (24 meses de historial):</strong></p>
+      <div class="metric-grid">
+        <div class="metric-item"><div class="metric-val">$542,000</div><div class="metric-lbl">Forecast central</div></div>
+        <div class="metric-item"><div class="metric-val">±8.7%</div><div class="metric-lbl">Intervalo de confianza</div></div>
+        <div class="metric-item"><div class="metric-val">+9.4%</div><div class="metric-lbl">vs Febrero 2026</div></div>
+        <div class="metric-item"><div class="metric-val">91.3%</div><div class="metric-lbl">Precisión MAPE del modelo</div></div>
+      </div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>E-Commerce</span><span>$244,000 (+10%)</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:85%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Tienda Física</span><span>$135,000 (+9%)</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:55%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Mayorista</span><span>$98,000 (+10%)</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:40%"></div></div></div>
+      <div class="unstructured-box">
+        <div class="unstructured-label">📊 CONTEXTO EXTERNO · Fuentes no estructuradas del modelo</div>
+        <div class="quote-item">Índice de actividad INDEC: +2.1% previsto Q1 2026</div>
+        <div class="quote-item">Google Trends "laptops gaming": +34% en 4 semanas en Argentina</div>
+      </div>
+      <div class="success-box">✅ Preparar 110% del stock habitual para cubrir la demanda proyectada.</div>`
+    },
+    'equipo-ventas': {
+        query: '¿Quiénes son los mejores vendedores?',
+        tables: ['fact_ventas', 'dim_vendedor'],
+        response: `
+      <div class="dw-query-trace"><span class="trace-label">🔍 DW Query →</span><span class="trace-table">fact_ventas</span><span class="trace-table">dim_vendedor</span></div>
+      <p><strong>Ranking Vendedores — Ene-Feb 2026:</strong></p>
+      <div class="insight-bar"><div class="insight-bar-label"><span>🥇 Carlos Mendez</span><span>$182,400 · 87 cierres</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:95%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>🥈 Valentina Ríos</span><span>$164,200 · 79 cierres</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:85%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>🥉 Martín Torres</span><span>$138,700 · 65 cierres</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:72%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Ana González</span><span>$98,100 · 51 cierres</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:50%"></div></div></div>
+      <div class="metric-grid" style="margin-top:12px">
+        <div class="metric-item"><div class="metric-val">62%</div><div class="metric-lbl">Tasa conversión top 3</div></div>
+        <div class="metric-item"><div class="metric-val">$2,096</div><div class="metric-lbl">Ticket prom. C.Mendez</div></div>
+      </div>
+      <div class="unstructured-box">
+        <div class="unstructured-label">📋 NOTAS DE REUNIÓN · Teams / Notion</div>
+        <div class="quote-item">"Carlos cerró contraro TechCorp por $48K anuales. Clave: 3 semanas de seguimiento personalizado." — Reunión ventas 14-Feb</div>
+        <div class="quote-item">"Valentina capacita a los nuevos con metodología consultiva. Está elevando al equipo."  — Review Q1</div>
+      </div>`
+    },
+    'devolucion': {
+        query: '¿Por qué aumentaron las devoluciones?',
+        tables: ['fact_devoluciones', 'dim_producto', 'soporte_tickets'],
+        response: `
+      <div class="dw-query-trace"><span class="trace-label">🔍 DW Query →</span><span class="trace-table">fact_devoluciones</span><span class="trace-table">soporte_tickets</span></div>
+      <div class="metric-grid">
+        <div class="metric-item"><div class="metric-val">12%</div><div class="metric-lbl">Tasa devoluciones Feb</div></div>
+        <div class="metric-item"><div class="metric-val">+4.2%</div><div class="metric-lbl">vs Enero (era 7.8%)</div></div>
+        <div class="metric-item"><div class="metric-val">847</div><div class="metric-lbl">Devoluciones registradas</div></div>
+        <div class="metric-item"><div class="metric-val">$52,400</div><div class="metric-lbl">Monto devuelto</div></div>
+      </div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Producto defectuoso</span><span>38% · 321 casos</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:80%;background:linear-gradient(90deg,#ec4899,#6366f1)"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Descripción no coincide</span><span>27% · 229 casos</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:55%;background:linear-gradient(90deg,#f59e0b,#6366f1)"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>Daño en envío</span><span>21% · 178 casos</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:42%;background:linear-gradient(90deg,#f59e0b,#6366f1)"></div></div></div>
+      <div class="unstructured-box">
+        <div class="unstructured-label">📧 TICKETS Y EMAILS · Análisis NLP automático</div>
+        <div class="quote-item">"El Router se recalienta y se reinicia solo. Es imposible trabajar así." — Ticket #55321</div>
+        <div class="quote-item">"La foto mostraba 3 puertos USB pero el equipo tiene solo 1. Me siento engañado." — Google 1⭐</div>
+        <div class="quote-item">"La caja llegó aplastada. La empresa logística que usan es un desastre." — Email 17-Feb</div>
+      </div>
+      <div class="alert-box">🚨 38% de defectos se concentra en lote LOTE-2026-02-A del proveedor Shenz-Tech. Revisar QC urgente.</div>`
+    },
+    'region': {
+        query: '¿Qué región está creciendo más?',
+        tables: ['fact_ventas', 'dim_geografia', 'dim_tiempo'],
+        response: `
+      <div class="dw-query-trace"><span class="trace-label">🔍 DW Query →</span><span class="trace-table">fact_ventas</span><span class="trace-table">dim_geografia</span></div>
+      <p><strong>Crecimiento por Región — Febrero vs Enero 2026:</strong></p>
+      <div class="insight-bar"><div class="insight-bar-label"><span>🚀 Patagonia Argentina</span><span>+38.4% · $48,200</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:95%;background:linear-gradient(90deg,#10b981,#06b6d4)"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>📈 NOA (Noroeste)</span><span>+24.1% · $62,400</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:70%;background:linear-gradient(90deg,#10b981,#06b6d4)"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>📈 Chile — Santiago</span><span>+19.7% · $88,700</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:58%;background:linear-gradient(90deg,#6366f1,#06b6d4)"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>➡️ Buenos Aires GBA</span><span>+8.3% · $198,400</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:40%"></div></div></div>
+      <div class="insight-bar"><div class="insight-bar-label"><span>⬇️ Córdoba Capital</span><span>-3.1% · $97,500</span></div><div class="insight-bar-track"><div class="insight-bar-fill" style="width:15%;background:linear-gradient(90deg,#ec4899,#f59e0b)"></div></div></div>
+      <div class="unstructured-box">
+        <div class="unstructured-label">🗺️ INFORMES DE CAMPO · Gerentes Zonales</div>
+        <div class="quote-item">"Apertura de oficina en Rawson impulsó ventas corporativas en Patagonia." — Reporte Zonal Feb 2026</div>
+        <div class="quote-item">"Córdoba baja por competencia de precio distribuidor local. Evaluar estrategia." — Dirección Comercial</div>
+      </div>
+      <div class="success-box">💡 Reforzar Patagonia con 1 vendedor dedicado. ROI proyectado en 4 meses.</div>`
+    }
+};
+
+// ── FUZZY MATCHING ─────────────────────────────────────────
+function matchQuestion(text) {
+    const t = text.toLowerCase();
+    if (t.match(/venta|mes|factur|ingreso|revenue/)) return 'ventas-mes';
+    if (t.match(/product|mejor|top|rendimiento|sku/)) return 'mejor-producto';
+    if (t.match(/riesgo|churn|abandon|perder|fuga/)) return 'clientes-riesgo';
+    if (t.match(/canal|rentab|margin|profit/)) return 'canal-rentable';
+    if (t.match(/satisfac|nps|csat|opinion/)) return 'satisfaccion';
+    if (t.match(/stock|inventario|quiebre|falta/)) return 'inventario';
+    if (t.match(/forecast|predic|próximo|futuro|cuánto.*vend/)) return 'forecast';
+    if (t.match(/vendedor|equipo|comercial|seller/)) return 'equipo-ventas';
+    if (t.match(/devolu|cambio|quejas|reclamo/)) return 'devolucion';
+    if (t.match(/region|ciudad|zona|geografí/)) return 'region';
+    return null;
+}
+
+// ── CHAT ENGINE ────────────────────────────────────────────
+function askQuestion(key) {
+    document.querySelectorAll('.q-chip').forEach(c => c.classList.remove('active'));
+    if (event && event.target) event.target.classList.add('active');
+    const entry = dwKnowledge[key];
+    if (!entry) return;
+    addUserMessage(entry.query);
+    simulateResponse(key);
+}
+
+function sendChat() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    addUserMessage(text);
+    input.value = '';
+    const key = matchQuestion(text);
+    key ? simulateResponse(key) : simulateUnknown();
+}
+
+function addUserMessage(text) {
+    const msgs = document.getElementById('chatMessages');
+    const now = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    const div = document.createElement('div');
+    div.className = 'chat-msg user-msg';
+    div.innerHTML = `<div class="msg-avatar">👤</div><div class="msg-content"><div class="msg-bubble">${text}</div><div class="msg-time">${now}</div></div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+}
+
+async function simulateResponse(key) {
+    const msgs = document.getElementById('chatMessages');
+    const typing = document.createElement('div');
+    typing.className = 'chat-msg bot-msg';
+    typing.innerHTML = `<div class="msg-avatar">🤖</div><div class="msg-content"><div class="msg-bubble" style="padding:8px 16px"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div><div style="font-size:0.7rem;color:#64748b;margin-top:4px">Consultando Data Warehouse...</div></div></div>`;
+    msgs.appendChild(typing);
+    msgs.scrollTop = msgs.scrollHeight;
+
+    await sleep(1600 + Math.random() * 700);
+    typing.remove();
+
+    const entry = dwKnowledge[key];
+    const now = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    const div = document.createElement('div');
+    div.className = 'chat-msg bot-msg';
+    div.innerHTML = `<div class="msg-avatar">🤖</div><div class="msg-content"><div class="msg-bubble">${entry.response}</div><div class="msg-time">${now} · Fuentes: ${entry.tables.join(', ')}</div></div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+
+    setTimeout(() => {
+        div.querySelectorAll('.insight-bar-fill').forEach(bar => {
+            const w = bar.style.width;
+            bar.style.width = '0%';
+            setTimeout(() => { bar.style.width = w; }, 80);
+        });
+    }, 200);
+}
+
+function simulateUnknown() {
+    const msgs = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = 'chat-msg bot-msg';
+    div.innerHTML = `<div class="msg-avatar">🤖</div><div class="msg-content"><div class="msg-bubble">
+    <p>No encontré datos exactos para eso en el DW. 😔</p>
+    <p style="margin-top:8px">Prueba preguntando sobre: <span class="tag-green">ventas</span>, <span class="tag-blue">clientes en riesgo</span>, <span class="tag-amber">inventario</span>, <span class="tag-pink">satisfacción</span>, <span class="tag-blue">forecast</span>, <span class="tag-green">devoluciones</span> o <span class="tag-amber">regiones</span>.<br><br>O usa los botones sugeridos del panel izquierdo 👈</p>
+  </div></div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+}
+
+/* ========================================================
+   ETL SIMULATOR FUNCTIONS (NEW)
+   ======================================================== */
+
+let etlSimulationRunning = false;
+let scenarioChartInstance = null;
+let currentScenario = 'ventas';
+
+// Animate counter function
+function animateCounter(element, target, duration = 1500) {
+    const start = 0;
+    const startTime = performance.now();
+
+    function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+        const current = Math.floor(start + (target - start) * easeOutQuart);
+
+        element.textContent = current.toLocaleString('es-AR');
+
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        }
+    }
+
+    requestAnimationFrame(update);
+}
+
+// Main ETL Simulation function
+async function runETLSimulation() {
+    if (etlSimulationRunning) return;
+    etlSimulationRunning = true;
+
+    const btn = document.querySelector('.btn-run-etl-sim');
+    btn.disabled = true;
+    btn.textContent = '⚙️ Ejecutando...';
+
+    // Reset all states
+    resetETLSimulator();
+
+    const startTime = Date.now();
+
+    // Animate source counters
+    const streams = document.querySelectorAll('.data-stream');
+    streams.forEach(stream => {
+        const counter = stream.querySelector('.stream-counter');
+        const target = parseInt(counter.getAttribute('data-target'));
+        animateCounter(counter, target, 2000);
+    });
+
+    // EXTRACT PHASE
+    const extractStage = document.getElementById('extractStage');
+    const packets = document.querySelectorAll('.data-packet');
+    const extractedCountEl = document.getElementById('extractedCount');
+    const formatsDisplay = document.getElementById('formatsDisplay');
+
+    extractStage.classList.add('active');
+    packets.forEach(p => p.classList.add('active'));
+
+    let totalExtracted = 0;
+    const formats = ['JSON', 'XML', 'CSV', 'API'];
+    for (let i = 0; i < formats.length; i++) {
+        await sleep(400);
+        totalExtracted += Math.floor(Math.random() * 30000) + 10000;
+        extractedCountEl.textContent = totalExtracted.toLocaleString('es-AR');
+        formatsDisplay.textContent = formats.slice(0, i + 1).join(' + ');
+        formatsDisplay.style.color = 'var(--c-accent2)';
+    }
+
+    extractStage.classList.remove('active');
+    extractStage.classList.add('done');
+    packets.forEach(p => p.classList.remove('active'));
+
+    // Particle animation to transform
+    const particle1 = document.getElementById('particle1');
+    particle1.classList.add('active');
+    await sleep(800);
+    particle1.classList.remove('active');
+
+    // TRANSFORM PHASE
+    const transformStage = document.getElementById('transformStage');
+    const transformedCountEl = document.getElementById('transformedCount');
+    const qualityScoreEl = document.getElementById('qualityScore');
+
+    transformStage.classList.add('active');
+
+    const transforms = [
+        { id: 'progressFecha', status: 'statusFecha', name: 'Fechas' },
+        { id: 'progressMoneda', status: 'statusMoneda', name: 'Monedas' },
+        { id: 'progressNumerico', status: 'statusNumerico', name: 'Numéricos' },
+        { id: 'progressLimpieza', status: 'statusLimpieza', name: 'Limpieza' },
+        { id: 'progressJoins', status: 'statusJoins', name: 'Joins' },
+        { id: 'progressValidacion', status: 'statusValidacion', name: 'Validación' }
+    ];
+
+    let totalTransformed = 0;
+    for (const t of transforms) {
+        const item = document.getElementById(t.id).closest('.transform-item');
+        const progressBar = document.getElementById(t.id);
+        const statusEl = document.getElementById(t.status);
+
+        item.classList.add('active');
+        statusEl.textContent = 'Procesando...';
+
+        await sleep(600);
+        progressBar.style.width = '100%';
+        await sleep(400);
+
+        item.classList.remove('active');
+        item.classList.add('done');
+        statusEl.textContent = '✓ Completado';
+
+        totalTransformed += Math.floor(Math.random() * 20000) + 8000;
+        transformedCountEl.textContent = totalTransformed.toLocaleString('es-AR');
+    }
+
+    // Quality score animation
+    let quality = 0;
+    const targetQuality = 98.7;
+    while (quality < targetQuality) {
+        quality += 2.5;
+        qualityScoreEl.textContent = Math.min(quality, targetQuality).toFixed(1) + '%';
+        await sleep(50);
+    }
+
+    transformStage.classList.remove('active');
+    transformStage.classList.add('done');
+
+    // Particle animation to load
+    const particle2 = document.getElementById('particle2');
+    particle2.classList.add('active');
+    await sleep(800);
+    particle2.classList.remove('active');
+
+    // LOAD PHASE
+    const loadStage = document.getElementById('loadStage');
+    const loadedCountEl = document.getElementById('loadedCount');
+    const loadStatusEl = document.getElementById('loadStatus');
+
+    loadStage.classList.add('active');
+    loadStatusEl.textContent = 'Cargando...';
+
+    const tables = [
+        { slot: 'dwSlot1', rows: 'rowsFactVentas', base: 175420 },
+        { slot: 'dwSlot2', rows: 'rowsDimClientes', base: 28934 },
+        { slot: 'dwSlot3', rows: 'rowsDimProductos', base: 8215 },
+        { slot: 'dwSlot4', rows: 'rowsDimTiempo', base: 3654 }
+    ];
+
+    let totalLoaded = 0;
+    for (const table of tables) {
+        const slot = document.getElementById(table.slot);
+        const rowsEl = document.getElementById(table.rows);
+
+        slot.classList.add('loading');
+        await sleep(500);
+
+        const rowCount = table.base + Math.floor(Math.random() * 5000);
+        rowsEl.textContent = rowCount.toLocaleString('es-AR') + ' rows';
+        totalLoaded += rowCount;
+
+        slot.classList.remove('loading');
+        slot.classList.add('done');
+        loadedCountEl.textContent = totalLoaded.toLocaleString('es-AR');
+    }
+
+    loadStatusEl.textContent = '✓ Completado';
+    loadStatusEl.style.color = 'var(--c-accent3)';
+
+    loadStage.classList.remove('active');
+    loadStage.classList.add('done');
+
+    // RESULT PANEL
+    const processingTime = ((Date.now() - startTime) / 1000).toFixed(1);
+    document.getElementById('totalRecords').textContent = totalLoaded.toLocaleString('es-AR');
+    document.getElementById('processingTime').textContent = processingTime + 's';
+    document.getElementById('dataQuality').textContent = '98.7%';
+
+    const resultMessage = document.getElementById('resultMessage');
+    resultMessage.textContent = '✓ ETL completado exitosamente. El DW está actualizado y listo para consultas.';
+    resultMessage.classList.add('success');
+
+    btn.disabled = false;
+    btn.textContent = '↺ Re-ejecutar ETL';
+    etlSimulationRunning = false;
+}
+
+function resetETLSimulator() {
+    // Reset stages
+    document.querySelectorAll('.pipeline-stage').forEach(stage => {
+        stage.classList.remove('active', 'done');
+    });
+
+    // Reset packets
+    document.querySelectorAll('.data-packet').forEach(p => p.classList.remove('active'));
+
+    // Reset particles
+    document.querySelectorAll('.connector-particle').forEach(p => p.classList.remove('active'));
+
+    // Reset transform items
+    document.querySelectorAll('.transform-item').forEach(item => {
+        item.classList.remove('active', 'done');
+        const progressBar = item.querySelector('.progress-bar');
+        if (progressBar) progressBar.style.width = '0%';
+        const status = item.querySelector('.transform-status');
+        if (status) status.textContent = 'Pendiente';
+    });
+
+    // Reset DW slots
+    document.querySelectorAll('.dw-table-slot').forEach(slot => {
+        slot.classList.remove('loading', 'done');
+    });
+
+    // Reset metrics
+    document.getElementById('extractedCount').textContent = '0';
+    document.getElementById('transformedCount').textContent = '0';
+    document.getElementById('loadedCount').textContent = '0';
+    document.getElementById('formatsDisplay').textContent = '--';
+    document.getElementById('qualityScore').textContent = '--%';
+    document.getElementById('loadStatus').textContent = '--';
+
+    // Reset result panel
+    document.getElementById('totalRecords').textContent = '0';
+    document.getElementById('processingTime').textContent = '0s';
+    document.getElementById('dataQuality').textContent = '--%';
+    document.getElementById('resultMessage').textContent = 'Esperando ejecución...';
+    document.getElementById('resultMessage').classList.remove('success');
+
+    // Reset stream counters
+    document.querySelectorAll('.stream-counter').forEach(counter => {
+        counter.textContent = '0';
+    });
+
+    // Reset table rows
+    document.getElementById('rowsFactVentas').textContent = '0 rows';
+    document.getElementById('rowsDimClientes').textContent = '0 rows';
+    document.getElementById('rowsDimProductos').textContent = '0 rows';
+    document.getElementById('rowsDimTiempo').textContent = '0 rows';
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/* ========================================================
+   SCENARIO SIMULATOR FUNCTIONS (NEW)
+   ======================================================== */
+
+function loadScenario(scenario) {
+    currentScenario = scenario;
+
+    // Update button states
+    document.querySelectorAll('.scenario-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-scenario') === scenario);
+    });
+
+    // Update labels based on scenario
+    const labels = {
+        ventas: {
+            param1: 'Crecimiento Mensual (%)',
+            param2: 'Inversión Marketing (USD)',
+            param3: 'Tasa Conversión (%)'
+        },
+        churn: {
+            param1: 'Tasa Retención (%)',
+            param2: 'Inversión Fidelización (USD)',
+            param3: 'Contactos por Cliente'
+        },
+        inventario: {
+            param1: 'Nivel Stock Seguridad (%)',
+            param2: 'Presupuesto Reposición (USD)',
+            param3: 'Días Inventario Objetivo'
+        },
+        marketing: {
+            param1: 'ROI Campaña (%)',
+            param2: 'Presupuesto Total (USD)',
+            param3: 'CPC Promedio (USD)'
+        }
+    };
+
+    const scenarioLabels = labels[scenario];
+    document.querySelector('[for="param1"]').textContent = scenarioLabels.param1;
+    document.querySelector('[for="param2"]').textContent = scenarioLabels.param2;
+    document.querySelector('[for="param3"]').textContent = scenarioLabels.param3;
+
+    // Reset results
+    resetScenarioResults();
+}
+
+function updateParamValue(paramId, value) {
+    const valueEl = document.getElementById(paramId + 'Value');
+    if (paramId === 'param2') {
+        valueEl.textContent = '$' + parseInt(value).toLocaleString('es-AR');
+    } else if (paramId === 'param3' && currentScenario === 'marketing') {
+        valueEl.textContent = '$' + parseFloat(value).toFixed(2);
+    } else {
+        valueEl.textContent = value + '%';
+    }
+}
+
+function resetScenarioResults() {
+    document.getElementById('resultIngresos').textContent = '$0';
+    document.getElementById('resultClientes').textContent = '0';
+    document.getElementById('resultUnidades').textContent = '0';
+    document.getElementById('resultROI').textContent = '--%';
+    document.getElementById('deltaIngresos').textContent = '--';
+    document.getElementById('deltaClientes').textContent = '--';
+    document.getElementById('deltaUnidades').textContent = '--';
+    document.getElementById('deltaROI').textContent = '--';
+    document.getElementById('insightsList').innerHTML = '<li class="insight-item">Selecciona parámetros y ejecuta la simulación para ver insights</li>';
+    document.getElementById('dwQuery').textContent = '-- La consulta se generará al ejecutar el escenario';
+
+    if (scenarioChartInstance) {
+        scenarioChartInstance.destroy();
+        scenarioChartInstance = null;
+    }
+}
+
+function runScenario() {
+    const param1 = parseFloat(document.getElementById('param1').value);
+    const param2 = parseFloat(document.getElementById('param2').value);
+    const param3 = parseFloat(document.getElementById('param3').value);
+
+    // Base values from DW
+    const baseValues = {
+        ventas: { ingresos: 2847392, clientes: 15420, unidades: 28934 },
+        churn: { ingresos: 2847392, clientes: 15420, unidades: 28934 },
+        inventario: { ingresos: 2847392, clientes: 15420, unidades: 28934 },
+        marketing: { ingresos: 2847392, clientes: 15420, unidades: 28934 }
+    };
+
+    const base = baseValues[currentScenario];
+
+    // Calculate results based on scenario and parameters
+    let resultados = {};
+    let insights = [];
+    let query = '';
+
+    switch (currentScenario) {
+        case 'ventas':
+            resultados = {
+                ingresos: base.ingresos * (1 + param1 / 100) * (1 + param3 / 100),
+                clientes: Math.floor(base.clientes * (1 + param1 / 150)),
+                unidades: Math.floor(base.unidades * (1 + param1 / 100))
+            };
+            resultados.roi = ((resultados.ingresos - param2) / param2) * 100;
+
+            insights = [
+                `Con un crecimiento del ${param1}%, los ingresos alcanzarían $${Math.round(resultados.ingresos).toLocaleString('es-AR')}`,
+                `La inversión de $${param2.toLocaleString('es-AR')} en marketing generaría un impacto de ${Math.round(resultados.clientes - base.clientes)} clientes nuevos`,
+                param3 > 10 ? '⚠️ Tasa de conversión alta detectada. Considera optimizar el funnel para mantener sostenibilidad.' : '✓ Tasa de conversión dentro de rangos óptimos'
+            ];
+
+            query = `SELECT \n  SUM(monto_usd) as ingresos_totales,\n  COUNT(DISTINCT cliente_id) as clientes_unicos,\n  SUM(unidades) as unidades_vendidas\nFROM fact_ventas fv\nJOIN dim_tiempo dt ON fv.fecha_id = dt.fecha_id\nWHERE dt.anio = 2026\n  AND dt.mes >= EXTRACT(MONTH FROM CURRENT_DATE)\nGROUP BY CUBE(dt.trimestre);`;
+            break;
+
+        case 'churn':
+            const retentionRate = param1 / 100;
+            const clientesRiesgo = Math.floor(base.clientes * (1 - retentionRate));
+            resultados = {
+                ingresos: base.ingresos * retentionRate,
+                clientes: base.clientes - clientesRiesgo,
+                unidades: Math.floor(base.unidades * retentionRate)
+            };
+            resultados.roi = ((base.ingresos - resultados.ingresos) / param2) * 100;
+
+            insights = [
+                `Con una tasa de retención del ${param1}%, se perderían ${clientesRiesgo} clientes`,
+                `El impacto en ingresos sería de $${Math.round(base.ingresos - resultados.ingresos).toLocaleString('es-AR')}`,
+                param2 > 200000 ? '✓ Alta inversión en fidelización puede recuperar hasta 60% de clientes en riesgo' : '⚠️ Considera aumentar inversión en programas de retención'
+            ];
+
+            query = `SELECT \n  c.segmento,\n  COUNT(*) as clientes_totales,\n  SUM(CASE WHEN c.riesgo_churn = true THEN 1 ELSE 0 END) as clientes_riesgo,\n  AVG(c.ltv) as ltv_promedio\nFROM dim_clientes c\nJOIN fact_ventas fv ON c.cliente_id = fv.cliente_id\nWHERE fv.fecha_id >= DATEADD(month, -6, CURRENT_DATE)\nGROUP BY c.segmento\nORDER BY clientes_riesgo DESC;`;
+            break;
+
+        case 'inventario':
+            const stockSeguridad = param1 / 100;
+            resultados = {
+                ingresos: base.ingresos * (1 - stockSeguridad * 0.3),
+                clientes: base.clientes,
+                unidades: Math.floor(base.unidades * (1 + stockSeguridad))
+            };
+            resultados.roi = ((resultados.ingresos - param2) / param2) * 100;
+
+            insights = [
+                `Un nivel de stock de seguridad del ${param1}% requiere ${Math.round(base.unidades * stockSeguridad)} unidades adicionales`,
+                `La inversión en reposición de $${param2.toLocaleString('es-AR')} cubriría ${Math.round(param2 / 150)} unidades promedio`,
+                param3 > 45 ? '⚠️ Nivel de inventario alto. Riesgo de obsolescencia.' : '✓ Nivel de inventario óptimo para demanda proyectada'
+            ];
+
+            query = `SELECT \n  p.categoria,\n  SUM(i.stock_actual) as stock_actual,\n  SUM(i.stock_seguridad) as stock_seguridad,\n  SUM(i.punto_reorden) as punto_reorden,\n  CASE WHEN SUM(i.stock_actual) < SUM(i.punto_reorden) THEN 'REORDENAR' ELSE 'OK' END as estado\nFROM dim_productos p\nJOIN fact_inventario i ON p.producto_id = i.producto_id\nGROUP BY p.categoria\nHAVING SUM(i.stock_actual) < SUM(i.punto_reorden);`;
+            break;
+
+        case 'marketing':
+            const cpc = param3;
+            const clicks = param2 / cpc;
+            const conversiones = Math.floor(clicks * param3 / 100);
+            resultados = {
+                ingresos: conversiones * 150,
+                clientes: conversiones,
+                unidades: conversiones * 2
+            };
+            resultados.roi = ((resultados.ingresos - param2) / param2) * 100;
+
+            insights = [
+                `Con CPC de $${cpc.toFixed(2)}, se obtendrían ${Math.round(clicks)} clicks`,
+                `A una tasa de conversión del ${param3}%, se generarían ${conversiones} conversiones`,
+                resultados.roi > 100 ? '✓ ROI excelente. Escalar inversión recomendada.' : resultados.roi > 50 ? '✓ ROI positivo. Optimizar segmentos para mejorar.' : '⚠️ ROI bajo. Revisar targeting y creatividades.'
+            ];
+
+            query = `SELECT \n  m.campana,\n  m.canal,\n  SUM(m.inversion) as inversion_total,\n  SUM(m.clicks) as clicks_totales,\n  SUM(m.conversiones) as conversiones_totales,\n  (SUM(m.conversiones) * 150 - SUM(m.inversion)) / SUM(m.inversion) * 100 as roi_porcentaje\nFROM fact_marketing m\nJOIN dim_campana dc ON m.campana_id = dc.campana_id\nWHERE dc.fecha_inicio >= DATEADD(month, -3, CURRENT_DATE)\nGROUP BY m.campana, m.canal\nORDER BY roi_porcentaje DESC;`;
+            break;
+    }
+
+    // Update KPIs with animation
+    animateKPI('resultIngresos', Math.round(resultados.ingresos), '$');
+    animateKPI('resultClientes', resultados.clientes, '');
+    animateKPI('resultUnidades', resultados.unidades, '');
+    animateKPI('resultROI', Math.round(resultados.roi), '', '%');
+
+    // Calculate deltas
+    const deltas = {
+        ingresos: ((resultados.ingresos - base.ingresos) / base.ingresos) * 100,
+        clientes: ((resultados.clientes - base.clientes) / base.clientes) * 100,
+        unidades: ((resultados.unidades - base.unidades) / base.unidades) * 100,
+        roi: resultados.roi - 85
+    };
+
+    updateDeltas(deltas);
+
+    // Update insights
+    const insightsList = document.getElementById('insightsList');
+    insightsList.innerHTML = insights.map(insight =>
+        `<li class="insight-item">${insight}</li>`
+    ).join('');
+
+    // Update query
+    document.getElementById('dwQuery').textContent = query;
+
+    // Render chart
+    renderScenarioChart(base, resultados);
+}
+
+function animateKPI(elementId, target, prefix = '', suffix = '') {
+    const element = document.getElementById(elementId);
+    const duration = 1200;
+    const start = 0;
+    const startTime = performance.now();
+
+    function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+        const current = Math.floor(start + (target - start) * easeOutQuart);
+
+        element.textContent = prefix + current.toLocaleString('es-AR') + suffix;
+
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        }
+    }
+
+    requestAnimationFrame(update);
+}
+
+function updateDeltas(deltas) {
+    const deltaElements = {
+        ingresos: document.getElementById('deltaIngresos'),
+        clientes: document.getElementById('deltaClientes'),
+        unidades: document.getElementById('deltaUnidades'),
+        roi: document.getElementById('deltaROI')
+    };
+
+    for (const [key, el] of Object.entries(deltaElements)) {
+        const value = deltas[key];
+        const sign = value >= 0 ? '+' : '';
+        el.textContent = `${sign}${value.toFixed(1)}%`;
+        el.className = 'kpi-delta ' + (value >= 0 ? 'positive' : 'negative');
+    }
+}
+
+function renderScenarioChart(base, resultados) {
+    const ctx = document.getElementById('scenarioChart').getContext('2d');
+
+    if (scenarioChartInstance) {
+        scenarioChartInstance.destroy();
+    }
+
+    const labels = ['Ingresos', 'Clientes', 'Unidades'];
+    const baseData = [base.ingresos / 10000, base.clientes, base.unidades];
+    const resultData = [resultados.ingresos / 10000, resultados.clientes, resultados.unidades];
+
+    scenarioChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Base DW',
+                    data: baseData,
+                    backgroundColor: 'rgba(99, 102, 241, 0.6)',
+                    borderColor: 'rgba(99, 102, 241, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Proyección',
+                    data: resultData,
+                    backgroundColor: 'rgba(16, 185, 129, 0.6)',
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        color: '#e0e6f0',
+                        font: { size: 11 }
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'Comparativa: Base vs Proyección',
+                    color: '#fff',
+                    font: { size: 13, weight: '600' }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: '#94a3b8'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        color: '#94a3b8'
+                    }
+                }
+            }
+        }
+    });
+}
