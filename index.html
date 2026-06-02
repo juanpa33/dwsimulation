@@ -4,10 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Warehouse | Simulación Didáctica</title>
+    <title>Data Warehouse & Modern Data Stack | Simulación Didáctica</title>
+    <meta name="description" content="Simulador interactivo de Data Warehouse: desde datos operacionales hasta analytics predictiva y IA. Aprende ETL, BI y Machine Learning aplicado.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -27,21 +28,45 @@
                 <a href="#etl">ETL en Vivo</a>
                 <a href="#visualizaciones">Dashboards</a>
                 <a href="#predictiva">IA Predictiva</a>
+                <a href="#chatbot">AI Assistant</a>
             </div>
+            <a href="#arquitectura" class="btn-nav-cta">Explorar DW →</a>
         </nav>
         <div class="hero-content">
-            <div class="badge">SIMULACIÓN INTERACTIVA</div>
-            <h1>¿Por qué necesitas un<br><span class="grad">Data Warehouse?</span></h1>
-            <p class="hero-sub">Una guía visual paso a paso: desde el caos de datos operacionales hasta tableros
-                dinámicos y analítica predictiva.</p>
-            <button class="btn-main"
-                onclick="scrollTo({top: document.getElementById('problema').offsetTop - 60, behavior:'smooth'})">Comenzar
-                Simulación →</button>
+            <div class="badge-new">🚀 SIMULACIÓN INTERACTIVA 2026</div>
+            <h1>Del Caos de Datos al<br><span class="grad">Data Warehouse Moderno</span></h1>
+            <p class="hero-sub">Una experiencia inmersiva paso a paso: integra sistemas dispersos, construye pipelines ETL/ELT, visualiza en Power BI y activa modelos de ML sobre una <strong>Single Source of Truth</strong>.</p>
+            <div class="hero-cta-group">
+                <button class="btn-main"
+                    onclick="scrollTo({top: document.getElementById('problema').offsetTop - 80, behavior:'smooth'})">Comenzar
+                    Simulación →</button>
+                <button class="btn-secondary"
+                    onclick="scrollTo({top: document.getElementById('etl').offsetTop - 80, behavior:'smooth'})">Ver ETL en Acción</button>
+            </div>
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <span class="stat-num" data-count="6">0</span>
+                    <span class="stat-label">Sistemas Integrados</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-num" data-count="289312">0</span>
+                    <span class="stat-label">Registros/día</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-num" data-count="15">0</span>
+                    <span class="stat-label">Min vs Días</span>
+                </div>
+            </div>
         </div>
         <div class="hero-orbs">
             <div class="orb o1"></div>
             <div class="orb o2"></div>
             <div class="orb o3"></div>
+            <div class="orb o4"></div>
+        </div>
+        <div class="scroll-indicator">
+            <span>Scroll para explorar</span>
+            <div class="scroll-arrow"></div>
         </div>
     </header>
 
