@@ -428,6 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
     buildCharts();
     buildMLCharts();
     animateKPIs();
+    animateHeroStats();
 
     // Intersection observer to animate KPIs on scroll
     const observer = new IntersectionObserver((entries) => {
@@ -435,6 +436,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { threshold: 0.3 });
     document.querySelectorAll('.dash-container').forEach(el => observer.observe(el));
 });
+
+// Hero Stats Animation
+function animateHeroStats() {
+    document.querySelectorAll('.hero-stats .stat-num').forEach(el => {
+        const target = parseInt(el.dataset.count);
+        let current = 0;
+        const inc = target / 60;
+        const interval = setInterval(() => {
+            current = Math.min(current + inc, target);
+            el.textContent = Math.round(current).toLocaleString();
+            if (current >= target) clearInterval(interval);
+        }, 25);
+    });
+}
 
 // ═══════════════════════════════════════════════════════════
 // ── CHATBOT: DW QUERY ENGINE ───────────────────────────────
